@@ -26,6 +26,8 @@ from evaluators.diverticulitis_evaluator import DiverticulitisEvaluator
 from evaluators.pancreatitis_evaluator import PancreatitisEvaluator
 from models.models import CustomLLM
 from agents.agent import build_agent_executor_ZeroShot
+from agents.planner_judge_agent import build_agent_executor_PlannerJudge
+from agents.AgentAction import AgentAction as CustomAgentAction
 
 HF_ID_TO_MODEL_CONFIG = {
     "meta-llama/Meta-Llama-3-70B-Instruct": "Llama3Instruct70B",
@@ -217,6 +219,12 @@ def _make_json_safe(value: Any) -> Any:
             "tool_input": _make_json_safe(value.tool_input),
             "log": value.log,
         }
+    if isinstance(value, CustomAgentAction):
+        return {
+            "tool": value.tool,
+            "tool_input": _make_json_safe(value.tool_input),
+            "log": value.log,
+        }
     return str(value)
 
 
@@ -351,9 +359,12 @@ def _adapt_slurm_cli_args():
             )
 
     if parsed.agent_type:
-        if parsed.agent_type.lower() == "zeroshot":
+        agent_type = parsed.agent_type.lower()
+        if agent_type == "zeroshot":
             overrides.append(_format_override("agent", "ZeroShot"))
-        elif parsed.agent_type.lower() == "rewoo":
+        elif agent_type in {"plannerjudge", "planner-judge", "planner_judge", "steer"}:
+            overrides.append(_format_override("agent", "PlannerJudge"))
+        elif agent_type == "rewoo":
             overrides.append(_format_override("agent", "ZeroShot"))
             CLI_ADAPTATION_WARNINGS.append(
                 "Agent type 'rewoo' requested but not implemented; falling back to ZeroShot."
@@ -436,6 +447,73 @@ def run(args: DictConfig):
     )
     llm.load_model(args.base_models)
 
+    agent_name = str(getattr(args, "agent", "ZeroShot") or "ZeroShot").lower()
+    use_planner_judge = agent_name in {"plannerjudge", "planner_judge", "planner-judge", "steer"}
+    planner_llm = None
+    planner_tags = tags
+    planner_stop_words = args.stop_words
+    if use_planner_judge:
+        planner_tags = {
+            "system_tag_start": args.planner_system_tag_start
+            if args.planner_system_tag_start is not None
+            else args.system_tag_start,
+            "user_tag_start": args.planner_user_tag_start
+            if args.planner_user_tag_start is not None
+            else args.user_tag_start,
+            "ai_tag_start": args.planner_ai_tag_start
+            if args.planner_ai_tag_start is not None
+            else args.ai_tag_start,
+            "system_tag_end": args.planner_system_tag_end
+            if args.planner_system_tag_end is not None
+            else args.system_tag_end,
+            "user_tag_end": args.planner_user_tag_end
+            if args.planner_user_tag_end is not None
+            else args.user_tag_end,
+            "ai_tag_end": args.planner_ai_tag_end
+            if args.planner_ai_tag_end is not None
+            else args.ai_tag_end,
+        }
+        planner_stop_words = (
+            args.planner_stop_words
+            if getattr(args, "planner_stop_words", None) is not None
+            else args.stop_words
+        )
+        planner_model_name = (
+            args.planner_model_name
+            if getattr(args, "planner_model_name", None) is not None
+            else args.model_name
+        )
+        planner_openai_api_key = (
+            args.planner_openai_api_key
+            if getattr(args, "planner_openai_api_key", None) is not None
+            else args.openai_api_key
+        )
+        planner_max_context = (
+            args.planner_max_context_length
+            if getattr(args, "planner_max_context_length", None) is not None
+            else args.max_context_length
+        )
+        planner_exllama = (
+            args.planner_exllama
+            if getattr(args, "planner_exllama", None) is not None
+            else args.exllama
+        )
+        planner_llm = CustomLLM(
+            model_name=planner_model_name,
+            openai_api_key=planner_openai_api_key,
+            tags=planner_tags,
+            max_context_length=planner_max_context,
+            exllama=planner_exllama,
+            load_in_4bit=getattr(args, "load_in_4bit", None),
+            load_in_8bit=getattr(args, "load_in_8bit", None),
+            torch_dtype=getattr(args, "torch_dtype", None),
+            attn_implementation=getattr(args, "attn_implementation", None),
+            seed=args.seed,
+            self_consistency=args.self_consistency,
+            gpt_oss_reasoning_effort=args.gpt_oss_reasoning_effort,
+        )
+        planner_llm.load_model(args.base_models)
+
     # Simplified, structured output directory and filenames
     # Folder structure: <local_logging_dir>/<pathology>/<model_tag>/<YYYYMMDD-HHMMSS>
     date_time = datetime.fromtimestamp(time.time())
@@ -484,20 +562,40 @@ def run(args: DictConfig):
         logger.info(f"Processing patient: {_id}")
 
         # Build
-        agent_executor = build_agent_executor_ZeroShot(
-            patient=hadm_info_clean[_id],
-            llm=llm,
-            lab_test_mapping_path=args.lab_test_mapping_path,
-            logfile=log_path,
-            max_context_length=args.max_context_length,
-            tags=tags,
-            include_ref_range=args.include_ref_range,
-            bin_lab_results=args.bin_lab_results,
-            include_tool_use_examples=args.include_tool_use_examples,
-            provide_diagnostic_criteria=args.provide_diagnostic_criteria,
-            summarize=args.summarize,
-            model_stop_words=args.stop_words,
-        )
+        if use_planner_judge:
+            agent_executor = build_agent_executor_PlannerJudge(
+                patient=hadm_info_clean[_id],
+                llm=llm,
+                planner_llm=planner_llm,
+                lab_test_mapping_path=args.lab_test_mapping_path,
+                max_context_length=args.max_context_length,
+                tags=tags,
+                planner_tags=planner_tags,
+                include_ref_range=args.include_ref_range,
+                bin_lab_results=args.bin_lab_results,
+                provide_diagnostic_criteria=args.provide_diagnostic_criteria,
+                planner_stop_words=planner_stop_words,
+                judge_stop_words=args.stop_words,
+                planner_temperature=args.planner_temperature,
+                planner_top_p=args.planner_top_p,
+                judge_temperature=args.judge_temperature,
+                max_steps=args.planner_max_steps,
+            )
+        else:
+            agent_executor = build_agent_executor_ZeroShot(
+                patient=hadm_info_clean[_id],
+                llm=llm,
+                lab_test_mapping_path=args.lab_test_mapping_path,
+                logfile=log_path,
+                max_context_length=args.max_context_length,
+                tags=tags,
+                include_ref_range=args.include_ref_range,
+                bin_lab_results=args.bin_lab_results,
+                include_tool_use_examples=args.include_tool_use_examples,
+                provide_diagnostic_criteria=args.provide_diagnostic_criteria,
+                summarize=args.summarize,
+                model_stop_words=args.stop_words,
+            )
 
         # Run
         result = agent_executor(

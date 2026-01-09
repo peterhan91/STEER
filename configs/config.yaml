@@ -2,6 +2,7 @@ defaults:
   - _self_
   - paths: example 
   - model: WizardLM70B
+  - planner: GPTOss20BPlanner
 
 pathology: appendicitis
 agent: ZeroShot
@@ -17,6 +18,10 @@ abbreviated: True
 self_consistency: False
 only_abnormal_labs: False
 gpt_oss_reasoning_effort: low
+planner_max_steps: 10
+planner_temperature: 0.2
+planner_top_p: 0.95
+judge_temperature: 0.0
 
 seed: 2023
 local_logging: True
