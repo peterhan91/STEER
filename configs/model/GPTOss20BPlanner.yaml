@@ -1,0 +1,20 @@
+# @package _global_
+defaults:
+  - _self_
+
+openai_api_key:
+model_name: "peterhan91/oss-20B-planner"
+max_context_length: 16384
+exllama: False
+
+system_tag_start: "<|start|>system\n"
+system_tag_end: "<|end|>\n"
+
+user_tag_start: "<|start|>user\n"
+user_tag_end: "<|end|>\n"
+
+ai_tag_start: "<|start|>assistant\n"
+ai_tag_end: "<|end|>\n"
+
+stop_words:
+ - "<|end|>"
