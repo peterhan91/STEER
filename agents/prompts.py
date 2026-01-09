@@ -42,32 +42,27 @@ Imaging: Do specific imaging scans and receive the radiologist report. Scan regi
 Patient History: 
 {input}{user_tag_end}{ai_tag_start}Thought:{agent_scratchpad}"""
 
-PLANNER_TEMPLATE = """{system_tag_start}You are an experienced clinician. Using your medical knowledge and the patient's presentation, propose a plan for evidence gathering that ensures diagnostic precision. Efficiency is preferred but comprehensive testing is allowed when clinically appropriate.
+PLANNER_TEMPLATE = """{system_tag_start}You are an experienced clinician. Using your medical knowledge and the patient's presentation, propose a focused and efficient plan for evidence gathering that ensures diagnostic precision and minimizes unnecessary tests.
 
-Output format:
-Return TWO sections in this exact order:
+Return ONLY a sequence of lines using this schema:
 
-###Clincial Recall:
-Recall relevant clinical guidelines for this patient.
-###Plan:
-Plan: <concise description and/or rationale for the next step>
+Plan: <concise rationale for next step>
 #E1 = <Tool>[<Input>]
 Plan: <next step>
 #E2 = <Tool>[<Input possibly informed by #E1>]
 ...
 
 Rules:
-- Keep the number of steps reasonable, but you may order comprehensive lab panels or multiple imaging studies when clinically justified.
-- Prefer high-yield, clinically relevant steps for the suspected condition(s), but you are not required to minimize the number of tests if broader evaluation is appropriate.
+- Minimize the number of steps, but ensure you gather sufficient information for an accurate and safe final diagnosis.
+- Prefer high-yield, patient-condition specific steps.
 - Use the exact tool names and input formats described below.
-- Recall relevant, evidence-based clinical guidelines that inform the diagnostic evaluation of this patient's presentation.
-- Do not conclude with a diagnosis here; your output is ONLY the recall + plan.
+- Do not conclude with a diagnosis here; your output is ONLY the plan.
 
 Tools:
 {tool_descriptions}{system_tag_end}{user_tag_start}Patient History:
 {input}
 
-Begin! Output both sections (###Clincial Recall, then ###Plan). Keep it concise and tailored.
+Begin! Output only Plan/#E lines as specified. Keep it concise and tailored.
 {user_tag_end}{ai_tag_start}"""
 
 JUDGE_TEMPLATE = """{system_tag_start}You are a clinician supervising an evidence-gathering plan. Given the plan and the evidence so far, decide whether to proceed with the next planned action, skip it, modify it, add a new action, or stop if evidence is sufficient.
