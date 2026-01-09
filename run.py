@@ -282,8 +282,6 @@ def _adapt_slurm_cli_args():
     parser.add_argument("--ref-ranges-json")
     parser.add_argument("--hf-model-id")
     parser.add_argument("--agent-type")
-    parser.add_argument("--rewoo-planner-reflexion", action="store_true")
-    parser.add_argument("--rewoo-num-plans", type=int)
     parser.add_argument("--include-ref-range", action="store_true")
     parser.add_argument("--bin-lab-results", action="store_true")
     parser.add_argument("--use-calculator", action="store_true")
@@ -301,8 +299,6 @@ def _adapt_slurm_cli_args():
             parsed.ref_ranges_json,
             parsed.hf_model_id,
             parsed.agent_type,
-            parsed.rewoo_planner_reflexion,
-            parsed.rewoo_num_plans is not None,
             parsed.include_ref_range,
             parsed.bin_lab_results,
             parsed.use_calculator,
@@ -364,11 +360,6 @@ def _adapt_slurm_cli_args():
             overrides.append(_format_override("agent", "ZeroShot"))
         elif agent_type in {"plannerjudge", "planner-judge", "planner_judge", "steer"}:
             overrides.append(_format_override("agent", "PlannerJudge"))
-        elif agent_type == "rewoo":
-            overrides.append(_format_override("agent", "ZeroShot"))
-            CLI_ADAPTATION_WARNINGS.append(
-                "Agent type 'rewoo' requested but not implemented; falling back to ZeroShot."
-            )
         else:
             overrides.append(_format_override("agent", parsed.agent_type))
 
@@ -389,14 +380,6 @@ def _adapt_slurm_cli_args():
             _format_override("gpt_oss_reasoning_effort", parsed.reasoning_effort)
         )
 
-    if parsed.rewoo_planner_reflexion:
-        CLI_ADAPTATION_WARNINGS.append(
-            "Ignoring --rewoo-planner-reflexion (feature not available in this repo)."
-        )
-    if parsed.rewoo_num_plans is not None:
-        CLI_ADAPTATION_WARNINGS.append(
-            "Ignoring --rewoo-num-plans (feature not available in this repo)."
-        )
     if parsed.use_calculator:
         CLI_ADAPTATION_WARNINGS.append(
             "Ignoring --use-calculator (feature not available in this repo)."
