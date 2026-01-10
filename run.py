@@ -41,6 +41,7 @@ HF_ID_TO_MODEL_CONFIG = {
     "openai/gpt-oss-120b": "GPTOss120B",
     "peterhan91/oss-20B-planner": "GPTOss20BPlanner",
     "Qwen/Qwen3-30B-A3B-Instruct-2507": "Qwen3MoE30B",
+    "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16": "Nemotron3Nano30B",
 }
 
 CLI_ADAPTATION_WARNINGS = []
@@ -550,6 +551,7 @@ def run(args: DictConfig):
         openai_reasoning_effort=getattr(args, "openai_reasoning_effort", None),
         openai_text_verbosity=getattr(args, "openai_text_verbosity", None),
         openai_max_output_tokens=getattr(args, "openai_max_output_tokens", None),
+        enable_thinking=getattr(args, "enable_thinking", None),
     )
     llm.load_model(args.base_models)
 
@@ -620,6 +622,7 @@ def run(args: DictConfig):
             openai_reasoning_effort=getattr(args, "openai_reasoning_effort", None),
             openai_text_verbosity=getattr(args, "openai_text_verbosity", None),
             openai_max_output_tokens=getattr(args, "openai_max_output_tokens", None),
+            enable_thinking=getattr(args, "enable_thinking", None),
         )
         planner_llm.load_model(args.base_models)
 

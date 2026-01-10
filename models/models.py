@@ -42,6 +42,7 @@ class CustomLLM(LLM):
     openai_reasoning_effort: Optional[str] = None
     openai_text_verbosity: Optional[str] = None
     openai_max_output_tokens: Optional[int] = None
+    enable_thinking: Optional[bool] = None
 
     @property
     def _llm_type(self) -> Any:
@@ -319,6 +320,42 @@ class CustomLLM(LLM):
             )
             print("loaded model")
 
+        elif self.model_name.startswith("nvidia/NVIDIA-Nemotron-3-"):
+            from transformers import AutoTokenizer, AutoModelForCausalLM
+
+            print(f"loading from {base_models}")
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.model_name,
+                cache_dir=base_models,
+                trust_remote_code=True,
+            )
+
+            torch_dtype = (
+                self._resolve_torch_dtype()
+                if self.torch_dtype is not None
+                else torch.bfloat16
+            )
+            model_kwargs = {
+                "cache_dir": base_models,
+                "device_map": "auto",
+                "torch_dtype": torch_dtype,
+                "trust_remote_code": True,
+            }
+            if self.attn_implementation:
+                model_kwargs["attn_implementation"] = self.attn_implementation
+
+            self.model = AutoModelForCausalLM.from_pretrained(
+                self.model_name,
+                **model_kwargs,
+            )
+            if (
+                self.tokenizer.pad_token_id is None
+                and self.tokenizer.eos_token_id is not None
+            ):
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+                self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
+            print("loaded model")
+
         elif self.model_name.startswith("Qwen/"):
             from transformers import AutoTokenizer, AutoModelForCausalLM
 
@@ -587,6 +624,42 @@ class CustomLLM(LLM):
 
             decoded = self.tokenizer.batch_decode(output_ids, skip_special_tokens=False)[0]
             output = self._extract_gpt_oss_final_message(decoded)
+
+        elif self.model_name.startswith("nvidia/NVIDIA-Nemotron-3-"):
+            messages = extract_sections(
+                prompt,
+                self.tags,
+            )
+            if not messages:
+                messages = [{"role": "user", "content": prompt}]
+
+            chat_kwargs = dict(add_generation_prompt=True, return_tensors="pt")
+            if self.enable_thinking is not None:
+                chat_kwargs["enable_thinking"] = self.enable_thinking
+            try:
+                input_ids = self.tokenizer.apply_chat_template(messages, **chat_kwargs).to(
+                    self.model.device
+                )
+            except TypeError:
+                chat_kwargs.pop("enable_thinking", None)
+                input_ids = self.tokenizer.apply_chat_template(messages, **chat_kwargs).to(
+                    self.model.device
+                )
+
+            gen_kwargs = dict(
+                max_new_tokens=kwargs.get("max_new_tokens", self.max_context_length),
+                do_sample=do_sample,
+                temperature=temperature,
+                top_p=top_p,
+            )
+            if top_k is not None:
+                gen_kwargs["top_k"] = top_k
+
+            with torch.no_grad():
+                output_ids = self.model.generate(input_ids, **gen_kwargs)
+
+            output_ids = output_ids[0][input_ids.shape[1] :]
+            output = self.tokenizer.decode(output_ids, skip_special_tokens=True)
 
         elif self.openai_api_key:
             messages = extract_sections(
