@@ -97,6 +97,7 @@ REACT_LOG_DIR=\"\${COMPARE_DIR}/react\"
 PLANNER_LOG_DIR=\"\${COMPARE_DIR}/planner\"
 SAMPLE_IDS_FILE=\"\${COMPARE_DIR}/sample_ids.txt\"
 MODEL_TAG=\"${HF_MODEL_ID##*/}\"
+export SAMPLE_IDS_FILE
 
 mkdir -p \"\$COMPARE_DIR\" \"\$REACT_LOG_DIR\" \"\$PLANNER_LOG_DIR\" \"$HF_HOME_IN_CONTAINER\" \"$XDG_CACHE_HOME\" \"$NLTK_DATA\" \
   \"$JOB_TMP\" \"$TORCH_EXTENSIONS_DIR\"
@@ -104,9 +105,12 @@ cd \"$CONTAINER_REPO_PATH\"
 source \"$CONTAINER_VENV/bin/activate\"
 
 python - <<'PY'
-import pickle, random, pathlib
+import os
+import pickle
+import random
+import pathlib
 hadm_pkl = pathlib.Path(\"${HADM_PKL}\")
-out_path = pathlib.Path(\"${SAMPLE_IDS_FILE}\")
+out_path = pathlib.Path(os.environ[\"SAMPLE_IDS_FILE\"])
 seed = int(\"${SEED}\")
 sample_n = int(\"${SAMPLE_COUNT}\")
 with hadm_pkl.open(\"rb\") as f:
