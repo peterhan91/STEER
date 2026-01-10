@@ -4,7 +4,7 @@ set -euo pipefail
 d=${1:-aortic_valve_disorders}
 
 root=/cbica/projects/CXR
-repo="${root}/codes/MIMIC-Clinical-Decision-Making-Framework"
+repo="${root}/codes/STEER"
 plain="${root}/codes/MIMIC-Plain"
 log="${repo}/outputs"
 

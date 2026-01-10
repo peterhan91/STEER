@@ -20,7 +20,7 @@ APPTAINER_WRITABLE_TMPFS="${APPTAINER_WRITABLE_TMPFS:-1}"
 APPTAINER_BIND="${APPTAINER_BIND:-/cbica/projects/CXR:/workspace}"
 PROJECTS_BIND="${PROJECTS_BIND:-/cbica/projects:/cbica/projects}"
 CONTAINER_HOME="${CONTAINER_HOME:-/workspace}"
-CONTAINER_REPO_PATH="${CONTAINER_REPO_PATH:-${CONTAINER_HOME}/codes/MIMIC-Clinical-Decision-Making-Framework}"
+CONTAINER_REPO_PATH="${CONTAINER_REPO_PATH:-${CONTAINER_HOME}/codes/STEER}"
 CONTAINER_VENV="${CONTAINER_VENV:-${CONTAINER_HOME}/venvs/torch}"
 HF_HOME_IN_CONTAINER="${HF_HOME_IN_CONTAINER:-${CONTAINER_HOME}/.cache/huggingface}"
 PY_ENTRY="${PY_ENTRY:-run.py}"
@@ -153,8 +153,8 @@ PLANNER_RESULTS=\$(ls -td \"\$PLANNER_LOG_DIR/${DISEASE}/\$MODEL_TAG\"/*/results
 
 python - <<'PY'
 import json, statistics, pathlib
-react_path = pathlib.Path(\"${REACT_RESULTS}\")
-planner_path = pathlib.Path(\"${PLANNER_RESULTS}\")
+react_path = pathlib.Path(\"\${REACT_RESULTS}\")
+planner_path = pathlib.Path(\"\${PLANNER_RESULTS}\")
 
 def summarize(path):
     data = json.loads(path.read_text())
