@@ -306,11 +306,16 @@ class CustomLLM(LLM):
                 if pad_token_id is not None:
                     self.tokenizer.pad_token_id = pad_token_id
 
+            model_kwargs = {
+                "cache_dir": base_models,
+                "device_map": "auto",
+                "torch_dtype": torch.bfloat16,
+            }
+            if self.attn_implementation:
+                model_kwargs["attn_implementation"] = self.attn_implementation
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_name,
-                cache_dir=base_models,
-                device_map="auto",
-                torch_dtype=torch.bfloat16,
+                **model_kwargs,
             )
             print("loaded model")
 

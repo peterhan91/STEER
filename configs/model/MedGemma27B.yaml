@@ -6,6 +6,7 @@ openai_api_key:
 model_name: "google/medgemma-27b-text-it"
 max_context_length: 128000
 exllama: False
+attn_implementation: flash_attention_2
 
 system_tag_start: "<bos><start_of_turn>system\n"
 system_tag_end: "<end_of_turn>\n"
