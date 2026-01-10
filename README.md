@@ -69,6 +69,19 @@ export CUDA_HOME=.../cuda/cuda_11.7.1
 pip install --no-deps -r requirements.txt
 ```
 
+## New Model Configs (Qwen3 + Nemotron 3 Nano)
+
+Examples using the added configs:
+
+```
+python run.py model=Qwen3MoE30B agent=PlannerJudge planner=GPTOss20BPlanner
+python run.py model=Nemotron3Nano30B agent=PlannerJudge planner=GPTOss20BPlanner enable_thinking=false
+```
+
+Notes:
+- `enable_thinking` defaults to `false` for Nemotron 3 Nano; set `true` to enable its reasoning mode.
+- The Qwen3 config requires `transformers>=4.51.0` (already reflected in `requirements.txt`).
+
 ## Compare ReAct vs. Planner+Judge (Slurm)
 
 Use the provided Slurm script to run a side-by-side comparison on the same sampled cases. The script samples a fixed set of HADM IDs, runs ReAct and Planner+Judge back-to-back, and prints a small summary at the end.
