@@ -40,6 +40,7 @@ HF_ID_TO_MODEL_CONFIG = {
     "openai/gpt-oss-20b": "GPTOss20B",
     "openai/gpt-oss-120b": "GPTOss120B",
     "peterhan91/oss-20B-planner": "GPTOss20BPlanner",
+    "Qwen/Qwen3-30B-A3B-Instruct-2507": "Qwen3MoE30B",
 }
 
 CLI_ADAPTATION_WARNINGS = []

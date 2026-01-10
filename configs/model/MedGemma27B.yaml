@@ -4,7 +4,7 @@ defaults:
 
 openai_api_key:
 model_name: "google/medgemma-27b-text-it"
-max_context_length: 128000
+max_context_length: 16384
 exllama: False
 attn_implementation: flash_attention_2
 

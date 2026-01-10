@@ -319,6 +319,44 @@ class CustomLLM(LLM):
             )
             print("loaded model")
 
+        elif self.model_name.startswith("Qwen/"):
+            from transformers import AutoTokenizer, AutoModelForCausalLM
+
+            print(f"loading from {base_models}")
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.model_name,
+                cache_dir=base_models,
+                trust_remote_code=True,
+            )
+
+            torch_dtype = "auto"
+            if self.torch_dtype is not None and not (
+                isinstance(self.torch_dtype, str)
+                and self.torch_dtype.strip().lower() == "auto"
+            ):
+                torch_dtype = self._resolve_torch_dtype()
+
+            model_kwargs = {
+                "cache_dir": base_models,
+                "device_map": "auto",
+                "torch_dtype": torch_dtype,
+                "trust_remote_code": True,
+            }
+            if self.attn_implementation:
+                model_kwargs["attn_implementation"] = self.attn_implementation
+
+            self.model = AutoModelForCausalLM.from_pretrained(
+                self.model_name,
+                **model_kwargs,
+            )
+            if (
+                self.tokenizer.pad_token_id is None
+                and self.tokenizer.eos_token_id is not None
+            ):
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+                self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
+            print("loaded model")
+
         elif (
             self.model_name.startswith("openai/gpt-oss")
             or self.model_name == "peterhan91/oss-20B-planner"

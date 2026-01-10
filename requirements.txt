@@ -330,7 +330,7 @@ tox==4.11.4
 tqdm==4.66.1
 tqdm-multiprocess==0.0.11
 traitlets==5.14.1
-transformers>=4.50.0
+transformers>=4.51.0
 transtab==0.0.5
 triton>=2.1.0
 tritonclient==2.34.0
