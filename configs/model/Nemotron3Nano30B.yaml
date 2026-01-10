@@ -7,7 +7,7 @@ model_name: "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16"
 max_context_length: 262144
 exllama: False
 torch_dtype: bfloat16
-attn_implementation:
+attn_implementation: flash_attention_2
 enable_thinking: false
 
 system_tag_start: "<|im_start|>system\n"

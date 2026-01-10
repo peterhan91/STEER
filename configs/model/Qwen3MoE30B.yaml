@@ -7,7 +7,7 @@ model_name: "Qwen/Qwen3-30B-A3B-Instruct-2507"
 max_context_length: 16384
 exllama: False
 torch_dtype: bfloat16
-attn_implementation:
+attn_implementation: flash_attention_2
 
 system_tag_start: "<|im_start|>system\n"
 system_tag_end: "<|im_end|>\n"
