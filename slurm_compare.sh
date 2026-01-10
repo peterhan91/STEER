@@ -25,6 +25,7 @@ CONTAINER_VENV="${CONTAINER_VENV:-${CONTAINER_HOME}/venvs/torch}"
 HF_HOME_IN_CONTAINER="${HF_HOME_IN_CONTAINER:-${CONTAINER_HOME}/.cache/huggingface}"
 PY_ENTRY="${PY_ENTRY:-run.py}"
 HF_MODEL_ID="${HF_MODEL_ID:-google/medgemma-27b-text-it}"
+PLANNER_CONFIG="${PLANNER_CONFIG:-GPTOss20BPlanner}"
 REASONING_EFFORT="${REASONING_EFFORT:-low}"
 SAMPLE_COUNT="${SAMPLE_COUNT:-20}"
 SEED="${SEED:-2023}"
@@ -133,7 +134,7 @@ python \"$PY_ENTRY\" \
   --reasoning-effort \"$REASONING_EFFORT\" \
   --agent-type plannerjudge \
   --hf-model-id \"$HF_MODEL_ID\" \
-  planner=GPTOss20BPlanner \
+  planner=${PLANNER_CONFIG} \
   patient_list_path=\"\$SAMPLE_IDS_FILE\"
 
 python \"$PY_ENTRY\" \

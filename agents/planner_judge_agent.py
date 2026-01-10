@@ -286,23 +286,32 @@ class PlannerJudgeAgent:
             stripped = line.strip()
             if not stripped:
                 continue
-            if stripped.lower().startswith("plan:"):
-                plan_lines.append(stripped)
+            normalized = re.sub(r"^[-*\d.()\s]+", "", stripped).strip()
+            if normalized.lower().startswith("plan:"):
+                plan_lines.append(normalized)
                 continue
-            match = re.match(r"^#E(\d+)\s*=\s*(.+)$", stripped)
-            if match:
-                eid = f"#E{match.group(1)}"
-                tool_call = match.group(2).strip()
-                tool, arg = self._extract_tool_and_input(tool_call)
-                tool = self._normalize_tool_name(tool)
-                steps.append(PlanStep(eid=eid, tool=tool, raw_input=arg or ""))
+            step = self._parse_plan_step_line(normalized)
+            if step:
+                steps.append(step)
         steps.sort(key=lambda step: int(re.sub(r"[^0-9]", "", step.eid) or 0))
         return plan_lines, steps
+
+    def _parse_plan_step_line(self, line: str) -> Optional[PlanStep]:
+        match = re.match(r"^#?E(\d+)\s*[:=\-]\s*(.+)$", line)
+        if not match:
+            return None
+        eid = f"#E{match.group(1)}"
+        tool_call = match.group(2).strip()
+        tool, arg = self._extract_tool_and_input(tool_call)
+        tool = self._normalize_tool_name(tool)
+        return PlanStep(eid=eid, tool=tool, raw_input=arg or "")
 
     def _strip_special_blocks(self, text: str) -> str:
         s = str(text or "")
         s = re.sub(r"<think>.*?</think>", "\n", s, flags=re.DOTALL | re.IGNORECASE)
         s = re.sub(r"<tool_call[^>]*>.*?</tool_call>", "\n", s, flags=re.DOTALL | re.IGNORECASE)
+        s = re.sub(r"```.*?```", "\n", s, flags=re.DOTALL)
+        s = s.replace("```", "\n")
         s = s.replace("<|im_start|>", "\n").replace("<|im_end|>", "\n")
         return s
 
@@ -311,6 +320,9 @@ class PlannerJudgeAgent:
         if "[" in s and s.endswith("]"):
             tool, rest = s.split("[", 1)
             return tool.strip(), rest[:-1].strip()
+        match = re.match(r"^(.*?)\s*(?:\:\s+|\-\s+)(.+)$", s)
+        if match:
+            return match.group(1).strip(), match.group(2).strip()
         return s, None
 
     def _normalize_tool_name(self, name: str) -> str:

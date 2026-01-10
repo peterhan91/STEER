@@ -57,6 +57,7 @@ Rules:
 - Prefer high-yield, patient-condition specific steps.
 - Use the exact tool names and input formats described below.
 - Do not conclude with a diagnosis here; your output is ONLY the plan.
+- Output only Plan/#E lines; do not add headers, bullets, or code fences.
 
 Tools:
 {tool_descriptions}{system_tag_end}{user_tag_start}Patient History:

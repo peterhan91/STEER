@@ -75,6 +75,7 @@ Examples using the added configs:
 
 ```
 python run.py model=Qwen3MoE30B agent=PlannerJudge planner=GPTOss20BPlanner
+python run.py model=Qwen3MoE30B agent=PlannerJudge planner=Qwen3MoE30BPlanner
 python run.py model=Nemotron3Nano30B agent=PlannerJudge planner=GPTOss20BPlanner enable_thinking=false
 ```
 
@@ -87,11 +88,11 @@ Notes:
 Use the provided Slurm script to run a side-by-side comparison on the same sampled cases. The script samples a fixed set of HADM IDs, runs ReAct and Planner+Judge back-to-back, and prints a small summary at the end.
 
 ```
-SAMPLE_COUNT=20 HF_MODEL_ID=google/medgemma-27b-text-it sbatch slurm_compare.sh cholecystitis
+SAMPLE_COUNT=20 HF_MODEL_ID=google/medgemma-27b-text-it PLANNER_CONFIG=Qwen3MoE30BPlanner sbatch slurm_compare.sh cholecystitis
 ```
 
 Notes:
-- The planner is fixed to `peterhan91/oss-20B-planner` via `planner=GPTOss20BPlanner`.
+- The planner defaults to `peterhan91/oss-20B-planner`; override with `PLANNER_CONFIG=Qwen3MoE30BPlanner` or another planner config.
 - Logs are written under `outputs/compare/<disease>/<timestamp>/` with separate subfolders for `react` and `planner`.
 
 
