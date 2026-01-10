@@ -1,0 +1,24 @@
+# @package _global_
+defaults:
+  - _self_
+
+openai_api_key:
+
+model_name: gpt-5.2
+max_context_length: 16384
+exllama: False
+
+openai_reasoning_effort: medium
+openai_text_verbosity: medium
+openai_max_output_tokens:
+
+system_tag_start: "<|im_start|>system"
+system_tag_end: "<|im_end|>"
+
+user_tag_start: "<|im_start|>user"
+user_tag_end: "<|im_end|>"
+
+ai_tag_start: "<|im_start|>assistant"
+ai_tag_end: "<|im_end|>"
+
+stop_words:

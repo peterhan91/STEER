@@ -427,6 +427,9 @@ def run(args: DictConfig):
         seed=args.seed,
         self_consistency=args.self_consistency,
         gpt_oss_reasoning_effort=args.gpt_oss_reasoning_effort,
+        openai_reasoning_effort=getattr(args, "openai_reasoning_effort", None),
+        openai_text_verbosity=getattr(args, "openai_text_verbosity", None),
+        openai_max_output_tokens=getattr(args, "openai_max_output_tokens", None),
     )
     llm.load_model(args.base_models)
 
@@ -494,6 +497,9 @@ def run(args: DictConfig):
             seed=args.seed,
             self_consistency=args.self_consistency,
             gpt_oss_reasoning_effort=args.gpt_oss_reasoning_effort,
+            openai_reasoning_effort=getattr(args, "openai_reasoning_effort", None),
+            openai_text_verbosity=getattr(args, "openai_text_verbosity", None),
+            openai_max_output_tokens=getattr(args, "openai_max_output_tokens", None),
         )
         planner_llm.load_model(args.base_models)
 

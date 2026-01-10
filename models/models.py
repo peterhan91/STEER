@@ -39,6 +39,9 @@ class CustomLLM(LLM):
     openai_api_key: str = None
     tags: Dict[str, str] = None
     gpt_oss_reasoning_effort: str = None
+    openai_reasoning_effort: Optional[str] = None
+    openai_text_verbosity: Optional[str] = None
+    openai_max_output_tokens: Optional[int] = None
 
     @property
     def _llm_type(self) -> Any:
@@ -414,6 +417,63 @@ class CustomLLM(LLM):
     def completion_with_backoff(self, **kwargs):
         return openai.ChatCompletion.create(**kwargs)
 
+    def _supports_responses_api(self) -> bool:
+        return hasattr(openai, "OpenAI")
+
+    def _extract_responses_text(self, response: Any) -> str:
+        if response is None:
+            return ""
+        if hasattr(response, "output_text"):
+            output_text = getattr(response, "output_text", None)
+            if output_text:
+                return output_text
+        if isinstance(response, dict):
+            if response.get("output_text"):
+                return response.get("output_text") or ""
+            output = response.get("output") or []
+        else:
+            output = getattr(response, "output", None) or []
+        for item in output:
+            if isinstance(item, dict):
+                if item.get("type") != "message":
+                    continue
+                content = item.get("content") or []
+            else:
+                if getattr(item, "type", None) != "message":
+                    continue
+                content = getattr(item, "content", None) or []
+            for part in content:
+                if isinstance(part, dict):
+                    if part.get("type") == "output_text" and part.get("text"):
+                        return part.get("text") or ""
+                else:
+                    if getattr(part, "type", None) == "output_text":
+                        text = getattr(part, "text", None)
+                        if text:
+                            return text
+        return ""
+
+    def _openai_responses_create(self, messages, do_sample, temperature, top_p) -> str:
+        client = openai.OpenAI(api_key=self.openai_api_key)
+        payload: Dict[str, Any] = {
+            "model": self.model_name,
+            "input": messages,
+        }
+        if self.openai_reasoning_effort:
+            payload["reasoning"] = {"effort": self.openai_reasoning_effort}
+        if self.openai_text_verbosity:
+            payload["text"] = {"verbosity": self.openai_text_verbosity}
+        if self.openai_max_output_tokens is not None:
+            payload["max_output_tokens"] = int(self.openai_max_output_tokens)
+
+        reasoning_effort = (self.openai_reasoning_effort or "none").lower()
+        if reasoning_effort == "none":
+            payload["temperature"] = temperature if do_sample else 0.0
+            payload["top_p"] = top_p
+
+        response = client.responses.create(**payload)
+        return self._extract_responses_text(response)
+
     def remove_input_tokens(self, output_tokens, ids):
         # Truncate the larger tensor to match the size of the smaller one
         min_size = min(output_tokens.size(1), ids.size(1))
@@ -491,14 +551,22 @@ class CustomLLM(LLM):
                 self.tags,
             )
 
-            response = self.completion_with_backoff(
-                model=self.model_name,
-                messages=messages,
-                stop=STOP_WORDS,
-                temperature=0.0,
-                seed=self.seed,
-            )
-            output = response["choices"][0]["message"]["content"]
+            if self.model_name.startswith("gpt-5") and self._supports_responses_api():
+                output = self._openai_responses_create(
+                    messages=messages,
+                    do_sample=do_sample,
+                    temperature=temperature,
+                    top_p=top_p,
+                )
+            else:
+                response = self.completion_with_backoff(
+                    model=self.model_name,
+                    messages=messages,
+                    stop=STOP_WORDS,
+                    temperature=0.0,
+                    seed=self.seed,
+                )
+                output = response["choices"][0]["message"]["content"]
         elif self.exllama:
             with torch.inference_mode():
                 ids = self.tokenizer.encode(prompt, encode_special_tokens=True)
