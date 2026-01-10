@@ -22,6 +22,8 @@ planner_max_steps: 10
 planner_temperature: 0.2
 planner_top_p: 0.95
 judge_temperature: 0.0
+sample_n: 0
+eval_accuracy: true
 
 seed: 2023
 local_logging: True

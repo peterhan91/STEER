@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import re
 from os.path import join
 import pickle
 import random
@@ -8,7 +9,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
 import langchain
 import hydra
@@ -202,6 +203,75 @@ def _parse_structured_from_output(output_text: str) -> Dict[str, Optional[str]]:
     }
 
 
+def _build_reference_from_hadm(hadm_entry: Dict[str, Any]) -> Tuple[str, List[str], List, List, List]:
+    discharge = (
+        hadm_entry.get("Discharge Diagnosis")
+        or hadm_entry.get("Discharge")
+        or ""
+    )
+    icd = hadm_entry.get("ICD Diagnosis") or hadm_entry.get("ICD Diagnoses") or []
+    if isinstance(icd, str):
+        icd = [icd]
+    procedures_icd9 = hadm_entry.get("Procedures ICD9") or []
+    if isinstance(procedures_icd9, str):
+        procedures_icd9 = [procedures_icd9]
+    procedures_icd10 = hadm_entry.get("Procedures ICD10") or []
+    if isinstance(procedures_icd10, str):
+        procedures_icd10 = [procedures_icd10]
+    procedures_discharge = hadm_entry.get("Procedures Discharge") or []
+    if isinstance(procedures_discharge, str):
+        procedures_discharge = [procedures_discharge]
+    return (
+        discharge,
+        icd,
+        procedures_icd9,
+        procedures_icd10,
+        procedures_discharge,
+    )
+
+
+def _format_executed_plan(intermediate_steps: Any) -> List[Dict[str, Any]]:
+    executed: List[Dict[str, Any]] = []
+    if not isinstance(intermediate_steps, list):
+        return executed
+    for step in intermediate_steps:
+        if not isinstance(step, (list, tuple)) or len(step) < 1:
+            continue
+        action = step[0]
+        tool = getattr(action, "tool", None)
+        tool_input = getattr(action, "tool_input", None)
+        action_input = None
+        if isinstance(tool_input, dict):
+            action_input = tool_input.get("action_input")
+        else:
+            action_input = tool_input
+        executed.append(
+            {
+                "tool": tool,
+                "action_input": action_input,
+            }
+        )
+    return executed
+
+
+def _compute_judge_metrics(judge_log: Any) -> Dict[str, Any]:
+    if not isinstance(judge_log, list):
+        return {}
+    total = len(judge_log)
+    counts = {"proceed": 0, "skip": 0, "modify": 0, "add": 0, "stop": 0}
+    for entry in judge_log:
+        decision = str((entry or {}).get("decision", "")).strip().lower()
+        if decision in counts:
+            counts[decision] += 1
+    modified = counts["skip"] + counts["modify"] + counts["add"]
+    mod_rate = (modified / total) if total else 0.0
+    return {
+        "judge_decision_counts": counts,
+        "step_modification_rate": mod_rate,
+        "judge_decision_total": total,
+    }
+
+
 def _make_json_safe(value: Any) -> Any:
     if isinstance(value, dict):
         return {str(key): _make_json_safe(val) for key, val in value.items()}
@@ -270,6 +340,30 @@ def _load_patient_data(args: DictConfig):
     return hadm_info_clean
 
 
+def _load_patient_id_list(path: str) -> List[Any]:
+    with open(path, "r", encoding="utf-8") as handle:
+        raw = handle.read().strip()
+    if not raw:
+        return []
+    if raw.startswith("["):
+        try:
+            data = json.loads(raw)
+            if isinstance(data, list):
+                return data
+        except json.JSONDecodeError:
+            pass
+    ids = []
+    for line in raw.splitlines():
+        for chunk in re.split(r"[,\s]+", line.strip()):
+            if not chunk:
+                continue
+            try:
+                ids.append(int(chunk))
+            except ValueError:
+                ids.append(chunk)
+    return ids
+
+
 def _adapt_slurm_cli_args():
     global CLI_ADAPTATION_WARNINGS
     if len(sys.argv) <= 1:
@@ -289,6 +383,8 @@ def _adapt_slurm_cli_args():
     parser.add_argument("--local-logging-dir")
     parser.add_argument("--base-model-cache")
     parser.add_argument("--reasoning-effort")
+    parser.add_argument("--sample-n", type=int)
+    parser.add_argument("--eval-accuracy", action="store_true")
     parsed, remaining = parser.parse_known_args(sys.argv[1:])
     recognized = any(
         [
@@ -306,6 +402,8 @@ def _adapt_slurm_cli_args():
             parsed.local_logging_dir,
             parsed.base_model_cache,
             parsed.reasoning_effort,
+            parsed.sample_n is not None,
+            parsed.eval_accuracy,
         ]
     )
     if not recognized:
@@ -379,6 +477,10 @@ def _adapt_slurm_cli_args():
         overrides.append(
             _format_override("gpt_oss_reasoning_effort", parsed.reasoning_effort)
         )
+    if parsed.sample_n is not None:
+        overrides.append(_format_override("sample_n", str(parsed.sample_n)))
+    if parsed.eval_accuracy:
+        overrides.append("eval_accuracy=true")
 
     if parsed.use_calculator:
         CLI_ADAPTATION_WARNINGS.append(
@@ -403,6 +505,23 @@ def run(args: DictConfig):
 
     # Load patient data
     hadm_info_clean = _load_patient_data(args)
+    patient_list_path = getattr(args, "patient_list_path", None)
+    if patient_list_path:
+        try:
+            patient_ids = _load_patient_id_list(patient_list_path)
+            if patient_ids:
+                hadm_info_clean = {
+                    k: hadm_info_clean[k]
+                    for k in patient_ids
+                    if k in hadm_info_clean
+                }
+        except OSError as exc:
+            logger.warning(f"Failed to read patient_list_path: {exc}")
+    sample_n = getattr(args, "sample_n", None)
+    if sample_n and sample_n > 0 and sample_n < len(hadm_info_clean):
+        rng = random.Random(args.seed)
+        sampled = rng.sample(list(hadm_info_clean.keys()), int(sample_n))
+        hadm_info_clean = {k: hadm_info_clean[k] for k in sampled}
 
     tags = {
         "system_tag_start": args.system_tag_start,
@@ -600,6 +719,34 @@ def run(args: DictConfig):
         result_dict_safe = dict(result)
         result_dict_safe["output_raw"] = raw_output_text
         result_dict_safe["output"] = structured
+
+        if use_planner_judge:
+            result_dict_safe["plan_initial"] = (
+                result.get("planner_summary")
+                or result.get("planner_plan")
+                or result.get("planner_raw")
+            )
+            result_dict_safe["plan_executed"] = _format_executed_plan(
+                result.get("intermediate_steps")
+            )
+            result_dict_safe.update(_compute_judge_metrics(result.get("judge_log")))
+
+        if getattr(args, "eval_accuracy", True):
+            try:
+                evaluator = load_evaluator(args.pathology)
+                reference = _build_reference_from_hadm(hadm_info_clean[_id])
+                eval_result = evaluator._evaluate_agent_trajectory(
+                    prediction=str(raw_output_text),
+                    input=hadm_info_clean[_id]["Patient History"].strip(),
+                    agent_trajectory=result.get("intermediate_steps", []),
+                    reference=reference,
+                )
+                result_dict_safe["evaluation"] = eval_result
+                result_dict_safe["diagnosis_accuracy"] = eval_result.get(
+                    "scores", {}
+                ).get("Diagnosis")
+            except Exception as exc:
+                logger.warning(f"Evaluation failed for {_id}: {exc}")
 
         json_results[str(_id)] = _serialize_result_for_json(result_dict_safe)
         try:

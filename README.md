@@ -69,6 +69,18 @@ export CUDA_HOME=.../cuda/cuda_11.7.1
 pip install --no-deps -r requirements.txt
 ```
 
+## Compare ReAct vs. Planner+Judge (Slurm)
+
+Use the provided Slurm script to run a side-by-side comparison on the same sampled cases. The script samples a fixed set of HADM IDs, runs ReAct and Planner+Judge back-to-back, and prints a small summary at the end.
+
+```
+SAMPLE_COUNT=20 HF_MODEL_ID=google/medgemma-27b-text-it sbatch slurm_compare.sh cholecystitis
+```
+
+Notes:
+- The planner is fixed to `peterhan91/oss-20B-planner` via `planner=GPTOss20BPlanner`.
+- Logs are written under `outputs/compare/<disease>/<timestamp>/` with separate subfolders for `react` and `planner`.
+
 
 # Citation
 
