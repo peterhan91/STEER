@@ -129,10 +129,11 @@ python \"$PY_ENTRY\" \
   --hadm-pkl \"$HADM_PKL\" \
   --lab-map-pkl \"$LAB_MAP_PKL\" \
   --ref-ranges-json \"$REF_RANGES_JSON\" \
-  --local-logging-dir \"\$REACT_LOG_DIR\" \
+  --local-logging-dir \"\$PLANNER_LOG_DIR\" \
   --reasoning-effort \"$REASONING_EFFORT\" \
-  --agent-type zeroshot \
+  --agent-type plannerjudge \
   --hf-model-id \"$HF_MODEL_ID\" \
+  planner=GPTOss20BPlanner \
   patient_list_path=\"\$SAMPLE_IDS_FILE\"
 
 python \"$PY_ENTRY\" \
@@ -141,20 +142,19 @@ python \"$PY_ENTRY\" \
   --hadm-pkl \"$HADM_PKL\" \
   --lab-map-pkl \"$LAB_MAP_PKL\" \
   --ref-ranges-json \"$REF_RANGES_JSON\" \
-  --local-logging-dir \"\$PLANNER_LOG_DIR\" \
+  --local-logging-dir \"\$REACT_LOG_DIR\" \
   --reasoning-effort \"$REASONING_EFFORT\" \
-  --agent-type plannerjudge \
+  --agent-type zeroshot \
   --hf-model-id \"$HF_MODEL_ID\" \
-  planner=GPTOss20BPlanner \
   patient_list_path=\"\$SAMPLE_IDS_FILE\"
 
-REACT_RESULTS=\$(ls -td \"\$REACT_LOG_DIR/${DISEASE}/\$MODEL_TAG\"/*/results.json | head -1)
-PLANNER_RESULTS=\$(ls -td \"\$PLANNER_LOG_DIR/${DISEASE}/\$MODEL_TAG\"/*/results.json | head -1)
+export REACT_RESULTS=\$(ls -td \"\$REACT_LOG_DIR/${DISEASE}/\$MODEL_TAG\"/*/results.json | head -1)
+export PLANNER_RESULTS=\$(ls -td \"\$PLANNER_LOG_DIR/${DISEASE}/\$MODEL_TAG\"/*/results.json | head -1)
 
 python - <<'PY'
-import json, statistics, pathlib
-react_path = pathlib.Path(\"\${REACT_RESULTS}\")
-planner_path = pathlib.Path(\"\${PLANNER_RESULTS}\")
+import json, statistics, pathlib, os
+react_path = pathlib.Path(os.environ[\"REACT_RESULTS\"])
+planner_path = pathlib.Path(os.environ[\"PLANNER_RESULTS\"])
 
 def summarize(path):
     data = json.loads(path.read_text())
