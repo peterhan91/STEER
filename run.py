@@ -700,6 +700,8 @@ def run(args: DictConfig):
     date_time = datetime.fromtimestamp(time.time())
     timestamp = date_time.strftime("%Y%m%d-%H%M%S")
     model_tag = args.model_name.split("/")[-1]
+    if use_guideline_retrieval:
+        model_tag = f"{model_tag}_RAG"
     run_dir = join(args.local_logging_dir, args.pathology, model_tag, timestamp)
 
     os.makedirs(run_dir, exist_ok=True)
