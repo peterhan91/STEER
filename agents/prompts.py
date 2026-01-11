@@ -63,6 +63,8 @@ Tools:
 {tool_descriptions}{system_tag_end}{user_tag_start}Patient History:
 {input}
 
+{guideline_context}
+
 Begin! Output only Plan/#E lines as specified. Keep it concise and tailored.
 {user_tag_end}{ai_tag_start}"""
 
@@ -88,9 +90,20 @@ Draft Plan:
 Evidence So Far:
 {evidence}
 
+{guideline_context}
+
 Next Planned Action:
 {next_action}
 {user_tag_end}{ai_tag_start}"""
+
+DIFFERENTIAL_TEMPLATE = """{system_tag_start}You are an experienced clinician. Generate the {max_differentials} most likely differential diagnoses for the patient context. Return only the diagnosis names, one per line, with no extra text.{system_tag_end}{user_tag_start}Patient context:
+{input}{user_tag_end}{ai_tag_start}"""
+
+GUIDELINE_SUMMARY_TEMPLATE = """{system_tag_start}You summarize clinical guidelines to guide diagnostic workup. Use only the provided snippets and do not add new information. For each differential, extract required labs, required imaging, and key diagnostic criteria. If not stated, write "Not stated". Keep each line under 20 words.{system_tag_end}{user_tag_start}Differentials:
+{differentials}
+
+Snippets:
+{snippets}{user_tag_end}{ai_tag_start}"""
 
 FINAL_DIAGNOSIS_TEMPLATE = """{system_tag_start}You are a medical artificial intelligence assistant. Provide the final diagnosis and treatment based on the patient history and gathered evidence.
 

@@ -22,6 +22,17 @@ planner_max_steps: 10
 planner_temperature: 0.2
 planner_top_p: 0.95
 judge_temperature: 0.0
+retriever_augmented: OFF
+guidelines_path: guidelines/open_guidelines.jsonl
+guidelines_max_lines: 2000
+guidelines_source_filter:
+guidelines_chunk_size: 1200
+guidelines_chunk_overlap: 150
+guidelines_top_k: 4
+guidelines_top_n: 5
+guidelines_snippet_tokens: 400
+guidelines_context_tokens: 600
+guidelines_query_tokens: 300
 sample_n: 0
 eval_accuracy: true
 

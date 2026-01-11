@@ -74,6 +74,12 @@ def _format_override(key: str, value: str, quote: bool = False) -> str:
     return f"{key}={_quote_for_hydra(value) if quote else value}"
 
 
+def _normalize_on_off(value: Any) -> bool:
+    if isinstance(value, str):
+        return value.strip().lower() in {"on", "true", "1", "yes"}
+    return bool(value)
+
+
 def _parse_ref_range_entry(entry):
     if isinstance(entry, dict):
         lower = (
@@ -388,6 +394,7 @@ def _adapt_slurm_cli_args():
     parser.add_argument("--reasoning-effort")
     parser.add_argument("--sample-n", type=int)
     parser.add_argument("--eval-accuracy", action="store_true")
+    parser.add_argument("--retriever-augmented")
     parsed, remaining = parser.parse_known_args(sys.argv[1:])
     recognized = any(
         [
@@ -407,6 +414,7 @@ def _adapt_slurm_cli_args():
             parsed.reasoning_effort,
             parsed.sample_n is not None,
             parsed.eval_accuracy,
+            parsed.retriever_augmented,
         ]
     )
     if not recognized:
@@ -484,6 +492,14 @@ def _adapt_slurm_cli_args():
         overrides.append(_format_override("sample_n", str(parsed.sample_n)))
     if parsed.eval_accuracy:
         overrides.append("eval_accuracy=true")
+    if parsed.retriever_augmented:
+        retriever_on = _normalize_on_off(parsed.retriever_augmented)
+        overrides.append(
+            _format_override(
+                "retriever_augmented",
+                "ON" if retriever_on else "OFF",
+            )
+        )
 
     if parsed.use_calculator:
         CLI_ADAPTATION_WARNINGS.append(
@@ -576,6 +592,19 @@ def run(args: DictConfig):
 
     agent_name = str(getattr(args, "agent", "ZeroShot") or "ZeroShot").lower()
     use_planner_judge = agent_name in {"plannerjudge", "planner_judge", "planner-judge", "steer"}
+    use_guideline_retrieval = _normalize_on_off(
+        getattr(args, "retriever_augmented", False)
+    )
+    if use_guideline_retrieval and not use_planner_judge:
+        CLI_ADAPTATION_WARNINGS.append(
+            "retriever_augmented is enabled but ignored because agent is not PlannerJudge."
+        )
+    guidelines_path = getattr(args, "guidelines_path", "")
+    if guidelines_path:
+        try:
+            guidelines_path = hydra.utils.to_absolute_path(guidelines_path)
+        except Exception:
+            guidelines_path = str(guidelines_path)
     planner_llm = None
     planner_tags = tags
     planner_stop_words = args.stop_words
@@ -732,6 +761,17 @@ def run(args: DictConfig):
                 planner_top_p=args.planner_top_p,
                 judge_temperature=args.judge_temperature,
                 max_steps=args.planner_max_steps,
+                use_guideline_retrieval=use_guideline_retrieval,
+                guidelines_path=guidelines_path,
+                guidelines_max_lines=args.guidelines_max_lines,
+                guidelines_source_filter=args.guidelines_source_filter,
+                guidelines_chunk_size=args.guidelines_chunk_size,
+                guidelines_chunk_overlap=args.guidelines_chunk_overlap,
+                guidelines_top_k=args.guidelines_top_k,
+                guidelines_top_n=args.guidelines_top_n,
+                guidelines_snippet_tokens=args.guidelines_snippet_tokens,
+                guidelines_context_tokens=args.guidelines_context_tokens,
+                guidelines_query_tokens=args.guidelines_query_tokens,
             )
         else:
             agent_executor = build_agent_executor_ZeroShot(

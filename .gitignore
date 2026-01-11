@@ -2,3 +2,4 @@
 *.pyc
 debug.txt
 guidelines/open_guidelines.jsonl
+.DS_Store

@@ -40,6 +40,19 @@ These additional arguments change the way information is presented but did not h
 - diag_crit_writer_openai_api_key: OpenAI key to ask for new diagnostic criteria if they are missing from the datafile
 - include_tool_use_examples: Provides examples of how to use the tools
 
+## Retriever-Augmented Planner+Judge
+
+Enable guideline-aware planning and judging (BM25 retrieval + summarization) with:
+
+```
+python run.py agent=PlannerJudge retriever_augmented=ON
+```
+
+Optional knobs (defaults in `configs/config.yaml`):
+- guidelines_path: Path to the guideline JSONL (default `guidelines/open_guidelines.jsonl`)
+- guidelines_source_filter: Substring filter on guideline source
+- guidelines_top_n / guidelines_top_k: Differential count and per-DDx retrieval depth
+
 ## MIMIC CDM Full Information
 
 For the MIMIC-CDM-Full Information task, executed through ```python run_full_info.py```, all relevant information required for a diagnosis is provided upfront to the model and only a diagnosis is asked for. This allows us to also control what information we provide the model and explore many aspects of model performance such as robustness. The relevant arguments for this task are those from above and additionally:
@@ -100,6 +113,17 @@ Notes:
 - If the planner config matches the judge model config, the run reuses the same model load; otherwise it loads a separate planner model.
 - For Qwen3 reuse, set `HF_MODEL_ID=Qwen/Qwen3-30B-A3B-Instruct-2507` with `PLANNER_CONFIG=Qwen3MoE30BPlanner`.
 - For Qwen3-Next reuse, set `HF_MODEL_ID=Qwen/Qwen3-Next-80B-A3B-Instruct` with `PLANNER_CONFIG=Qwen3Next80BPlanner`.
+
+## Retriever-Augmented Planner+Judge (Slurm)
+
+Use `--retriever-augmented ON` and make sure the agent is PlannerJudge:
+
+```
+HF_MODEL_ID=google/medgemma-27b-text-it sbatch slurm.sh cholecystitis \
+  --agent-type plannerjudge \
+  --retriever-augmented ON \
+  guidelines_path=guidelines/open_guidelines.jsonl
+```
 
 
 # Citation
