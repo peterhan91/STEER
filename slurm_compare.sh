@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=mimic_cdm_compare
-#SBATCH --partition=ai
+#SBATCH --partition=ailong
 #SBATCH --nodes=1
 #SBATCH --gpus-per-node=a100:2
 #SBATCH --cpus-per-gpu=8
