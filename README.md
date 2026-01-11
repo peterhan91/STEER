@@ -53,6 +53,13 @@ Optional knobs (defaults in `configs/config.yaml`):
 - guidelines_source_filter: Substring filter on guideline source
 - guidelines_top_n / guidelines_top_k: Differential count and per-DDx retrieval depth
 
+Guideline JSONL source:
+- Hugging Face dataset: `epfl-llm/guidelines`
+- Example download (writes JSONL to `guidelines/open_guidelines.jsonl`):
+```
+python -c "from datasets import load_dataset; ds=load_dataset('epfl-llm/guidelines', split='train'); ds.to_json('guidelines/open_guidelines.jsonl', orient='records', lines=True)"
+```
+
 ## MIMIC CDM Full Information
 
 For the MIMIC-CDM-Full Information task, executed through ```python run_full_info.py```, all relevant information required for a diagnosis is provided upfront to the model and only a diagnosis is asked for. This allows us to also control what information we provide the model and explore many aspects of model performance such as robustness. The relevant arguments for this task are those from above and additionally:
