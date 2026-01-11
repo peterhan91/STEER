@@ -41,6 +41,16 @@ JOB_TMP="${JOB_TMP:-${CONTAINER_HOME}/scratch/SLURM_${SLURM_JOB_ID:-$$}}"
 TORCH_EXTENSIONS_DIR="${TORCH_EXTENSIONS_DIR:-${JOB_TMP}/torch_extensions}"
 
 DISEASE="${1:-cholecystitis}"
+if [[ $# -gt 0 ]]; then
+  shift
+fi
+
+PYTHON_EXTRA_ARGS=""
+if [[ $# -gt 0 ]]; then
+    for arg in "$@"; do
+        PYTHON_EXTRA_ARGS+=" $(printf '%q' "$arg")"
+    done
+fi
 
 case "$DISEASE" in
   aortic_valve_disorders|mitral_valve_disorders|congestive_heart_failure|myocardial_infarction)
@@ -135,7 +145,8 @@ python \"$PY_ENTRY\" \
   --agent-type plannerjudge \
   --hf-model-id \"$HF_MODEL_ID\" \
   planner=${PLANNER_CONFIG} \
-  patient_list_path=\"\$SAMPLE_IDS_FILE\"
+  patient_list_path=\"\$SAMPLE_IDS_FILE\" \
+  ${PYTHON_EXTRA_ARGS}
 
 python \"$PY_ENTRY\" \
   --paths cbica \
@@ -147,7 +158,8 @@ python \"$PY_ENTRY\" \
   --reasoning-effort \"$REASONING_EFFORT\" \
   --agent-type zeroshot \
   --hf-model-id \"$HF_MODEL_ID\" \
-  patient_list_path=\"\$SAMPLE_IDS_FILE\"
+  patient_list_path=\"\$SAMPLE_IDS_FILE\" \
+  ${PYTHON_EXTRA_ARGS}
 
 export REACT_RESULTS=\$(ls -td \"\$REACT_LOG_DIR/${DISEASE}/\$MODEL_TAG\"/*/results.json | head -1)
 export PLANNER_RESULTS=\$(ls -td \"\$PLANNER_LOG_DIR/${DISEASE}/\$MODEL_TAG\"/*/results.json | head -1)

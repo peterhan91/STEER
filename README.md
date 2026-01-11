@@ -40,12 +40,13 @@ These additional arguments change the way information is presented but did not h
 - diag_crit_writer_openai_api_key: OpenAI key to ask for new diagnostic criteria if they are missing from the datafile
 - include_tool_use_examples: Provides examples of how to use the tools
 
-## Retriever-Augmented Planner+Judge
+## Retriever-Augmented Runs
 
-Enable guideline-aware planning and judging (BM25 retrieval + summarization) with:
+Enable guideline-aware retrieval (BM25 + summarization) for Planner+Judge or ZeroShot:
 
 ```
 python run.py agent=PlannerJudge retriever_augmented=ON
+python run.py agent=ZeroShot retriever_augmented=ON
 ```
 
 Optional knobs (defaults in `configs/config.yaml`):
@@ -120,10 +121,11 @@ Notes:
 - If the planner config matches the judge model config, the run reuses the same model load; otherwise it loads a separate planner model.
 - For Qwen3 reuse, set `HF_MODEL_ID=Qwen/Qwen3-30B-A3B-Instruct-2507` with `PLANNER_CONFIG=Qwen3MoE30BPlanner`.
 - For Qwen3-Next reuse, set `HF_MODEL_ID=Qwen/Qwen3-Next-80B-A3B-Instruct` with `PLANNER_CONFIG=Qwen3Next80BPlanner`.
+- Extra args after the disease are forwarded to both runs (Planner+Judge and ReAct).
 
-## Retriever-Augmented Planner+Judge (Slurm)
+## Retriever-Augmented Runs (Slurm)
 
-Use `--retriever-augmented ON` and make sure the agent is PlannerJudge:
+Use `--retriever-augmented ON` to enable guidelines for both Planner+Judge and ReAct:
 
 ```
 SAMPLE_COUNT=100 HF_MODEL_ID=google/medgemma-27b-text-it sbatch slurm.sh cholecystitis \
@@ -133,7 +135,7 @@ SAMPLE_COUNT=100 HF_MODEL_ID=google/medgemma-27b-text-it sbatch slurm.sh cholecy
 ```
 
 ```
-SAMPLE_COUNT=100 HF_MODEL_ID=Qwen/Qwen3-Next-80B-A3B-Instruct PLANNER_CONFIG=Qwen3Next80BPlanner sbatch slurm_compare.sh cholecystitis --agent-type plannerjudge --retriever-augmented ON guidelines_path=guidelines/open_guidelines.jsonl
+SAMPLE_COUNT=100 HF_MODEL_ID=Qwen/Qwen3-Next-80B-A3B-Instruct PLANNER_CONFIG=Qwen3Next80BPlanner sbatch slurm_compare.sh cholecystitis --retriever-augmented ON guidelines_path=guidelines/open_guidelines.jsonl
 ```
 
 

@@ -37,10 +37,14 @@ The tools you can use are:
 
 Physical Examination: Perform physical examination of patient and receive the observations.
 Laboratory Tests: Run specific laboratory tests and receive their values. The specific tests must be specified in the 'Action Input' field.
-Imaging: Do specific imaging scans and receive the radiologist report. Scan region AND modality must be specified in the 'Action Input' field.{add_tool_descr}{system_tag_end}{user_tag_start}{examples}Consider the following case and come to a final diagnosis and treatment by thinking, planning, and using the aforementioned tools and format.
+Imaging: Do specific imaging scans and receive the radiologist report. Scan region AND modality must be specified in the 'Action Input' field.{add_tool_descr}
+
+If Guideline Context is provided, prioritize guideline-recommended investigations and treatments.{system_tag_end}{user_tag_start}{examples}Consider the following case and come to a final diagnosis and treatment by thinking, planning, and using the aforementioned tools and format.
 
 Patient History: 
-{input}{user_tag_end}{ai_tag_start}Thought:{agent_scratchpad}"""
+{input}
+
+{guideline_context}{user_tag_end}{ai_tag_start}Thought:{agent_scratchpad}"""
 
 PLANNER_TEMPLATE = """{system_tag_start}You are an experienced clinician. Using your medical knowledge and the patient's presentation, propose a focused and efficient plan for evidence gathering that ensures diagnostic precision and minimizes unnecessary tests.
 

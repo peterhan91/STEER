@@ -595,10 +595,6 @@ def run(args: DictConfig):
     use_guideline_retrieval = _normalize_on_off(
         getattr(args, "retriever_augmented", False)
     )
-    if use_guideline_retrieval and not use_planner_judge:
-        CLI_ADAPTATION_WARNINGS.append(
-            "retriever_augmented is enabled but ignored because agent is not PlannerJudge."
-        )
     guidelines_path = getattr(args, "guidelines_path", "")
     if guidelines_path:
         try:
@@ -789,6 +785,19 @@ def run(args: DictConfig):
                 provide_diagnostic_criteria=args.provide_diagnostic_criteria,
                 summarize=args.summarize,
                 model_stop_words=args.stop_words,
+                use_guideline_retrieval=use_guideline_retrieval,
+                guidelines_path=guidelines_path,
+                guidelines_max_lines=args.guidelines_max_lines,
+                guidelines_source_filter=args.guidelines_source_filter,
+                guidelines_chunk_size=args.guidelines_chunk_size,
+                guidelines_chunk_overlap=args.guidelines_chunk_overlap,
+                guidelines_top_k=args.guidelines_top_k,
+                guidelines_top_n=args.guidelines_top_n,
+                guidelines_snippet_tokens=args.guidelines_snippet_tokens,
+                guidelines_context_tokens=args.guidelines_context_tokens,
+                guidelines_query_tokens=args.guidelines_query_tokens,
+                guideline_temperature=args.planner_temperature,
+                guideline_top_p=args.planner_top_p,
             )
 
         # Run
