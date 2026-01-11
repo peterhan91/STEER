@@ -606,7 +606,10 @@ def action_input_pretty_printer(obj, lab_test_mapping_df: pd.DataFrame):
         for itemid in obj:
             # Convert itemids to str
             if isinstance(itemid, int):
-                obj_str.append(itemid_to_field(itemid, "label", lab_test_mapping_df))
+                label = itemid_to_field(itemid, "label", lab_test_mapping_df)
+                if label is not None:
+                    obj_str.append(label)
+                # Skip unknown itemids
             # Not found strs can be appended directly
             elif isinstance(itemid, str):
                 obj_str.append(itemid)
@@ -689,6 +692,8 @@ def count_radiology_modality_and_organ_matches(text):
 
 
 def itemid_to_field(itemid: int, field: str, lab_test_mapping_df: pd.DataFrame):
-    return lab_test_mapping_df.loc[lab_test_mapping_df["itemid"] == itemid, field].iloc[
-        0
-    ]
+    matches = lab_test_mapping_df.loc[lab_test_mapping_df["itemid"] == itemid, field]
+    if len(matches) == 0:
+        print(f"Warning: itemid {itemid} not found in lab_test_mapping, skipping")
+        return None
+    return matches.iloc[0]
