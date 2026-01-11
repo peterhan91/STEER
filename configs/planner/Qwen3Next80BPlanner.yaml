@@ -1,0 +1,21 @@
+# @package _global_
+defaults:
+  - _self_
+
+planner_openai_api_key:
+planner_model_name: "Qwen/Qwen3-Next-80B-A3B-Instruct"
+planner_max_context_length: 16384
+planner_exllama: False
+
+planner_system_tag_start: "<|im_start|>system\n"
+planner_system_tag_end: "<|im_end|>\n"
+
+planner_user_tag_start: "<|im_start|>user\n"
+planner_user_tag_end: "<|im_end|>\n"
+
+planner_ai_tag_start: "<|im_start|>assistant\n"
+planner_ai_tag_end: "<|im_end|>\n"
+
+planner_stop_words:
+  - "<|im_end|>"
+  - "<|endoftext|>"

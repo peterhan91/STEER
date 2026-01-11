@@ -76,12 +76,15 @@ Examples using the added configs:
 ```
 python run.py model=Qwen3MoE30B agent=PlannerJudge planner=GPTOss20BPlanner
 python run.py model=Qwen3MoE30B agent=PlannerJudge planner=Qwen3MoE30BPlanner
+python run.py model=Qwen3Next80B agent=PlannerJudge planner=GPTOss20BPlanner
+python run.py model=Qwen3Next80B agent=PlannerJudge planner=Qwen3Next80BPlanner
 python run.py model=Nemotron3Nano30B agent=PlannerJudge planner=GPTOss20BPlanner enable_thinking=false
 ```
 
 Notes:
 - `enable_thinking` defaults to `false` for Nemotron 3 Nano; set `true` to enable its reasoning mode.
 - The Qwen3 config requires `transformers>=4.51.0` (already reflected in `requirements.txt`).
+- Qwen3-Next requires the `transformers` main branch; if you see `KeyError: 'qwen3_next'`, install with `pip install git+https://github.com/huggingface/transformers.git@main`.
 
 ## Compare ReAct vs. Planner+Judge (Slurm)
 
@@ -94,6 +97,9 @@ SAMPLE_COUNT=20 HF_MODEL_ID=google/medgemma-27b-text-it PLANNER_CONFIG=Qwen3MoE3
 Notes:
 - The planner defaults to `peterhan91/oss-20B-planner`; override with `PLANNER_CONFIG=Qwen3MoE30BPlanner` or another planner config.
 - Logs are written under `outputs/compare/<disease>/<timestamp>/` with separate subfolders for `react` and `planner`.
+- If the planner config matches the judge model config, the run reuses the same model load; otherwise it loads a separate planner model.
+- For Qwen3 reuse, set `HF_MODEL_ID=Qwen/Qwen3-30B-A3B-Instruct-2507` with `PLANNER_CONFIG=Qwen3MoE30BPlanner`.
+- For Qwen3-Next reuse, set `HF_MODEL_ID=Qwen/Qwen3-Next-80B-A3B-Instruct` with `PLANNER_CONFIG=Qwen3Next80BPlanner`.
 
 
 # Citation

@@ -41,6 +41,7 @@ HF_ID_TO_MODEL_CONFIG = {
     "openai/gpt-oss-120b": "GPTOss120B",
     "peterhan91/oss-20B-planner": "GPTOss20BPlanner",
     "Qwen/Qwen3-30B-A3B-Instruct-2507": "Qwen3MoE30B",
+    "Qwen/Qwen3-Next-80B-A3B-Instruct": "Qwen3Next80B",
     "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16": "Nemotron3Nano30B",
 }
 
@@ -554,6 +555,24 @@ def run(args: DictConfig):
         enable_thinking=getattr(args, "enable_thinking", None),
     )
     llm.load_model(args.base_models)
+    llm_config = {
+        "model_name": args.model_name,
+        "openai_api_key": args.openai_api_key,
+        "tags": tags,
+        "max_context_length": args.max_context_length,
+        "exllama": args.exllama,
+        "load_in_4bit": getattr(args, "load_in_4bit", None),
+        "load_in_8bit": getattr(args, "load_in_8bit", None),
+        "torch_dtype": getattr(args, "torch_dtype", None),
+        "attn_implementation": getattr(args, "attn_implementation", None),
+        "seed": args.seed,
+        "self_consistency": args.self_consistency,
+        "gpt_oss_reasoning_effort": args.gpt_oss_reasoning_effort,
+        "openai_reasoning_effort": getattr(args, "openai_reasoning_effort", None),
+        "openai_text_verbosity": getattr(args, "openai_text_verbosity", None),
+        "openai_max_output_tokens": getattr(args, "openai_max_output_tokens", None),
+        "enable_thinking": getattr(args, "enable_thinking", None),
+    }
 
     agent_name = str(getattr(args, "agent", "ZeroShot") or "ZeroShot").lower()
     use_planner_judge = agent_name in {"plannerjudge", "planner_judge", "planner-judge", "steer"}
@@ -606,25 +625,46 @@ def run(args: DictConfig):
             if getattr(args, "planner_exllama", None) is not None
             else args.exllama
         )
-        planner_llm = CustomLLM(
-            model_name=planner_model_name,
-            openai_api_key=planner_openai_api_key,
-            tags=planner_tags,
-            max_context_length=planner_max_context,
-            exllama=planner_exllama,
-            load_in_4bit=getattr(args, "load_in_4bit", None),
-            load_in_8bit=getattr(args, "load_in_8bit", None),
-            torch_dtype=getattr(args, "torch_dtype", None),
-            attn_implementation=getattr(args, "attn_implementation", None),
-            seed=args.seed,
-            self_consistency=args.self_consistency,
-            gpt_oss_reasoning_effort=args.gpt_oss_reasoning_effort,
-            openai_reasoning_effort=getattr(args, "openai_reasoning_effort", None),
-            openai_text_verbosity=getattr(args, "openai_text_verbosity", None),
-            openai_max_output_tokens=getattr(args, "openai_max_output_tokens", None),
-            enable_thinking=getattr(args, "enable_thinking", None),
-        )
-        planner_llm.load_model(args.base_models)
+        planner_config = {
+            "model_name": planner_model_name,
+            "openai_api_key": planner_openai_api_key,
+            "tags": planner_tags,
+            "max_context_length": planner_max_context,
+            "exllama": planner_exllama,
+            "load_in_4bit": getattr(args, "load_in_4bit", None),
+            "load_in_8bit": getattr(args, "load_in_8bit", None),
+            "torch_dtype": getattr(args, "torch_dtype", None),
+            "attn_implementation": getattr(args, "attn_implementation", None),
+            "seed": args.seed,
+            "self_consistency": args.self_consistency,
+            "gpt_oss_reasoning_effort": args.gpt_oss_reasoning_effort,
+            "openai_reasoning_effort": getattr(args, "openai_reasoning_effort", None),
+            "openai_text_verbosity": getattr(args, "openai_text_verbosity", None),
+            "openai_max_output_tokens": getattr(args, "openai_max_output_tokens", None),
+            "enable_thinking": getattr(args, "enable_thinking", None),
+        }
+        if planner_config == llm_config:
+            planner_llm = llm
+        else:
+            planner_llm = CustomLLM(
+                model_name=planner_model_name,
+                openai_api_key=planner_openai_api_key,
+                tags=planner_tags,
+                max_context_length=planner_max_context,
+                exllama=planner_exllama,
+                load_in_4bit=getattr(args, "load_in_4bit", None),
+                load_in_8bit=getattr(args, "load_in_8bit", None),
+                torch_dtype=getattr(args, "torch_dtype", None),
+                attn_implementation=getattr(args, "attn_implementation", None),
+                seed=args.seed,
+                self_consistency=args.self_consistency,
+                gpt_oss_reasoning_effort=args.gpt_oss_reasoning_effort,
+                openai_reasoning_effort=getattr(args, "openai_reasoning_effort", None),
+                openai_text_verbosity=getattr(args, "openai_text_verbosity", None),
+                openai_max_output_tokens=getattr(args, "openai_max_output_tokens", None),
+                enable_thinking=getattr(args, "enable_thinking", None),
+            )
+            planner_llm.load_model(args.base_models)
 
     # Simplified, structured output directory and filenames
     # Folder structure: <local_logging_dir>/<pathology>/<model_tag>/<YYYYMMDD-HHMMSS>

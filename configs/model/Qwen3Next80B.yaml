@@ -1,0 +1,23 @@
+# @package _global_
+defaults:
+  - _self_
+
+openai_api_key:
+model_name: "Qwen/Qwen3-Next-80B-A3B-Instruct"
+max_context_length: 16384
+exllama: False
+torch_dtype: auto
+attn_implementation: flash_attention_2
+
+system_tag_start: "<|im_start|>system\n"
+system_tag_end: "<|im_end|>\n"
+
+user_tag_start: "<|im_start|>user\n"
+user_tag_end: "<|im_end|>\n"
+
+ai_tag_start: "<|im_start|>assistant\n"
+ai_tag_end: "<|im_end|>\n"
+
+stop_words:
+ - "<|im_end|>"
+ - "<|endoftext|>"
