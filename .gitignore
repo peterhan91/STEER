@@ -1,3 +1,4 @@
 .vscode/
 *.pyc
 debug.txt
+guidelines/open_guidelines.jsonl
