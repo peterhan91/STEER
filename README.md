@@ -126,11 +126,16 @@ Notes:
 Use `--retriever-augmented ON` and make sure the agent is PlannerJudge:
 
 ```
-HF_MODEL_ID=google/medgemma-27b-text-it sbatch slurm.sh cholecystitis \
+SAMPLE_COUNT=100 HF_MODEL_ID=google/medgemma-27b-text-it sbatch slurm.sh cholecystitis \
   --agent-type plannerjudge \
   --retriever-augmented ON \
   guidelines_path=guidelines/open_guidelines.jsonl
 ```
+
+```
+SAMPLE_COUNT=100 HF_MODEL_ID=Qwen/Qwen3-Next-80B-A3B-Instruct PLANNER_CONFIG=Qwen3Next80BPlanner sbatch slurm_compare.sh cholecystitis --agent-type plannerjudge --retriever-augmented ON guidelines_path=guidelines/open_guidelines.jsonl
+```
+
 
 
 # Citation
