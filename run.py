@@ -28,6 +28,7 @@ from evaluators.pancreatitis_evaluator import PancreatitisEvaluator
 from models.models import CustomLLM
 from agents.agent import build_agent_executor_ZeroShot
 from agents.planner_judge_agent import build_agent_executor_PlannerJudge
+from agents.rewoo_planner_judge_agent import build_agent_executor_ReWOOPlannerJudge
 from agents.AgentAction import AgentAction as CustomAgentAction
 
 HF_ID_TO_MODEL_CONFIG = {
@@ -469,6 +470,8 @@ def _adapt_slurm_cli_args():
             overrides.append(_format_override("agent", "ZeroShot"))
         elif agent_type in {"plannerjudge", "planner-judge", "planner_judge", "steer"}:
             overrides.append(_format_override("agent", "PlannerJudge"))
+        elif agent_type in {"rewoo", "rewooplannerjudge", "rewoo-planner-judge", "rewoo_planner_judge"}:
+            overrides.append(_format_override("agent", "ReWOOPlannerJudge"))
         else:
             overrides.append(_format_override("agent", parsed.agent_type))
 
@@ -592,6 +595,7 @@ def run(args: DictConfig):
 
     agent_name = str(getattr(args, "agent", "ZeroShot") or "ZeroShot").lower()
     use_planner_judge = agent_name in {"plannerjudge", "planner_judge", "planner-judge", "steer"}
+    use_rewoo_planner_judge = agent_name in {"rewoo", "rewooplannerjudge", "rewoo_planner_judge", "rewoo-planner-judge"}
     use_guideline_retrieval = _normalize_on_off(
         getattr(args, "retriever_augmented", False)
     )
@@ -604,7 +608,7 @@ def run(args: DictConfig):
     planner_llm = None
     planner_tags = tags
     planner_stop_words = args.stop_words
-    if use_planner_judge:
+    if use_planner_judge or use_rewoo_planner_judge:
         planner_tags = {
             "system_tag_start": args.planner_system_tag_start
             if args.planner_system_tag_start is not None
@@ -741,7 +745,38 @@ def run(args: DictConfig):
         logger.info(f"Processing patient: {_id}")
 
         # Build
-        if use_planner_judge:
+        if use_rewoo_planner_judge:
+            agent_executor = build_agent_executor_ReWOOPlannerJudge(
+                patient=hadm_info_clean[_id],
+                llm=llm,
+                planner_llm=planner_llm,
+                lab_test_mapping_path=args.lab_test_mapping_path,
+                max_context_length=args.max_context_length,
+                tags=tags,
+                planner_tags=planner_tags,
+                include_ref_range=args.include_ref_range,
+                bin_lab_results=args.bin_lab_results,
+                provide_diagnostic_criteria=args.provide_diagnostic_criteria,
+                planner_stop_words=planner_stop_words,
+                judge_stop_words=args.stop_words,
+                planner_temperature=args.planner_temperature,
+                planner_top_p=args.planner_top_p,
+                judge_temperature=args.judge_temperature,
+                max_steps=args.planner_max_steps,
+                rewoo_iterations=getattr(args, "rewoo_iterations", 3),
+                use_guideline_retrieval=use_guideline_retrieval,
+                guidelines_path=guidelines_path,
+                guidelines_max_lines=args.guidelines_max_lines,
+                guidelines_source_filter=args.guidelines_source_filter,
+                guidelines_chunk_size=args.guidelines_chunk_size,
+                guidelines_chunk_overlap=args.guidelines_chunk_overlap,
+                guidelines_top_k=args.guidelines_top_k,
+                guidelines_top_n=args.guidelines_top_n,
+                guidelines_snippet_tokens=args.guidelines_snippet_tokens,
+                guidelines_context_tokens=args.guidelines_context_tokens,
+                guidelines_query_tokens=args.guidelines_query_tokens,
+            )
+        elif use_planner_judge:
             agent_executor = build_agent_executor_PlannerJudge(
                 patient=hadm_info_clean[_id],
                 llm=llm,
@@ -802,7 +837,10 @@ def run(args: DictConfig):
 
         # Run
         result = agent_executor(
-            {"input": hadm_info_clean[_id]["Patient History"].strip()}
+            {
+                "input": hadm_info_clean[_id]["Patient History"].strip(),
+                "guideline_context": "",
+            }
         )
         # Build structured output alongside raw output
         try:
@@ -815,7 +853,7 @@ def run(args: DictConfig):
         result_dict_safe["output_raw"] = raw_output_text
         result_dict_safe["output"] = structured
 
-        if use_planner_judge:
+        if use_planner_judge or use_rewoo_planner_judge:
             result_dict_safe["plan_initial"] = (
                 result.get("planner_summary")
                 or result.get("planner_plan")
@@ -825,6 +863,11 @@ def run(args: DictConfig):
                 result.get("intermediate_steps")
             )
             result_dict_safe.update(_compute_judge_metrics(result.get("judge_log")))
+
+        if use_rewoo_planner_judge:
+            rewoo_exploration = result.get("rewoo_exploration", {})
+            result_dict_safe["rewoo_iterations"] = rewoo_exploration.get("iterations", [])
+            result_dict_safe["rewoo_reflections"] = rewoo_exploration.get("reflections", [])
 
         if getattr(args, "eval_accuracy", True):
             try:
