@@ -510,7 +510,7 @@ def create_prompt(
 ) -> PromptTemplate:
     template = PromptTemplate(
         template=CHAT_TEMPLATE,
-        input_variables=["input", "agent_scratchpad", "guideline_context"],
+        input_variables=["input", "agent_scratchpad"],
         partial_variables={
             "tool_names": action_input_pretty_printer(tool_names, None),
             "add_tool_descr": add_tool_descr,
@@ -520,6 +520,7 @@ def create_prompt(
             "ai_tag_start": tags["ai_tag_start"],
             "system_tag_end": tags["system_tag_end"],
             "user_tag_end": tags["user_tag_end"],
+            "guideline_context": "",
         },
     )
     return template
