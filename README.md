@@ -109,7 +109,7 @@ Notes:
 
 ## Compare ReAct vs. Planner+Judge (Slurm)
 
-Use the provided Slurm script to run a side-by-side comparison on the same sampled cases. The script samples a fixed set of HADM IDs, runs ReAct and Planner+Judge back-to-back, and prints a small summary at the end.
+Use the provided Slurm script to run a side-by-side comparison on the same sampled cases. The script samples a fixed set of HADM IDs, runs a baseline agent and a comparison agent back-to-back, and prints a small summary at the end (defaults: ZeroShot/ReAct vs Planner+Judge).
 
 ```
 SAMPLE_COUNT=20 HF_MODEL_ID=google/medgemma-27b-text-it PLANNER_CONFIG=Qwen3MoE30BPlanner sbatch slurm_compare.sh cholecystitis
@@ -118,10 +118,18 @@ SAMPLE_COUNT=20 HF_MODEL_ID=google/medgemma-27b-text-it PLANNER_CONFIG=Qwen3MoE3
 Notes:
 - The planner defaults to `peterhan91/oss-20B-planner`; override with `PLANNER_CONFIG=Qwen3MoE30BPlanner` or another planner config.
 - Logs are written under `outputs/compare/<disease>/<timestamp>/` with separate subfolders for `react` and `planner`.
+- Override agents with `BASELINE_AGENT_TYPE` and `COMPARE_AGENT_TYPE` (for example, `COMPARE_AGENT_TYPE=rewoo`). Use `BASELINE_LABEL`/`COMPARE_LABEL` to customize folder names.
 - If the planner config matches the judge model config, the run reuses the same model load; otherwise it loads a separate planner model.
 - For Qwen3 reuse, set `HF_MODEL_ID=Qwen/Qwen3-30B-A3B-Instruct-2507` with `PLANNER_CONFIG=Qwen3MoE30BPlanner`.
 - For Qwen3-Next reuse, set `HF_MODEL_ID=Qwen/Qwen3-Next-80B-A3B-Instruct` with `PLANNER_CONFIG=Qwen3Next80BPlanner`.
 - Extra args after the disease are forwarded to both runs (Planner+Judge and ReAct).
+
+Example: compare ZeroShot vs ReWOO
+```
+SAMPLE_COUNT=100 HF_MODEL_ID=Qwen/Qwen3-30B-A3B-Instruct-2507 PLANNER_CONFIG=Qwen3MoE30BPlanner \
+  BASELINE_AGENT_TYPE=zeroshot COMPARE_AGENT_TYPE=rewoo \
+  sbatch slurm_compare.sh cholecystitis
+```
 
 ## Retriever-Augmented Runs (Slurm)
 

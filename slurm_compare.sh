@@ -29,6 +29,10 @@ PLANNER_CONFIG="${PLANNER_CONFIG:-GPTOss20BPlanner}"
 REASONING_EFFORT="${REASONING_EFFORT:-low}"
 SAMPLE_COUNT="${SAMPLE_COUNT:-20}"
 SEED="${SEED:-2023}"
+BASELINE_AGENT_TYPE="${BASELINE_AGENT_TYPE:-zeroshot}"
+COMPARE_AGENT_TYPE="${COMPARE_AGENT_TYPE:-plannerjudge}"
+BASELINE_LABEL="${BASELINE_LABEL:-}"
+COMPARE_LABEL="${COMPARE_LABEL:-}"
 
 DATA_ROOT_III="${DATA_ROOT_III:-${CONTAINER_HOME}/dropbox/CDM_III}"
 DATA_ROOT_IV="${DATA_ROOT_IV:-${CONTAINER_HOME}/dropbox/CDM_IV}"
@@ -104,13 +108,31 @@ export PYTHONPATH=\"${CONTAINER_REPO_PATH}:${PYTHONPATH:-}\"
 
 RUN_TAG=\$(date +%Y%m%d-%H%M%S)
 COMPARE_DIR=\"${LOG_DIR}/compare/${DISEASE}/\${RUN_TAG}\"
-REACT_LOG_DIR=\"\${COMPARE_DIR}/react\"
-PLANNER_LOG_DIR=\"\${COMPARE_DIR}/planner\"
+BASELINE_AGENT_TYPE=\"${BASELINE_AGENT_TYPE}\"
+COMPARE_AGENT_TYPE=\"${COMPARE_AGENT_TYPE}\"
+BASELINE_LABEL=\"${BASELINE_LABEL}\"
+COMPARE_LABEL=\"${COMPARE_LABEL}\"
+if [[ -z \"\$BASELINE_LABEL\" ]]; then
+  if [[ \"\$BASELINE_AGENT_TYPE\" == \"zeroshot\" ]]; then
+    BASELINE_LABEL=\"react\"
+  else
+    BASELINE_LABEL=\"\$BASELINE_AGENT_TYPE\"
+  fi
+fi
+if [[ -z \"\$COMPARE_LABEL\" ]]; then
+  if [[ \"\$COMPARE_AGENT_TYPE\" == \"plannerjudge\" ]]; then
+    COMPARE_LABEL=\"planner\"
+  else
+    COMPARE_LABEL=\"\$COMPARE_AGENT_TYPE\"
+  fi
+fi
+BASELINE_LOG_DIR=\"\${COMPARE_DIR}/\${BASELINE_LABEL}\"
+COMPARE_LOG_DIR=\"\${COMPARE_DIR}/\${COMPARE_LABEL}\"
 SAMPLE_IDS_FILE=\"\${COMPARE_DIR}/sample_ids.txt\"
 MODEL_TAG=\"${HF_MODEL_ID##*/}\"
 export SAMPLE_IDS_FILE
 
-mkdir -p \"\$COMPARE_DIR\" \"\$REACT_LOG_DIR\" \"\$PLANNER_LOG_DIR\" \"$HF_HOME_IN_CONTAINER\" \"$XDG_CACHE_HOME\" \"$NLTK_DATA\" \
+mkdir -p \"\$COMPARE_DIR\" \"\$BASELINE_LOG_DIR\" \"\$COMPARE_LOG_DIR\" \"$HF_HOME_IN_CONTAINER\" \"$XDG_CACHE_HOME\" \"$NLTK_DATA\" \
   \"$JOB_TMP\" \"$TORCH_EXTENSIONS_DIR\"
 cd \"$CONTAINER_REPO_PATH\"
 source \"$CONTAINER_VENV/bin/activate\"
@@ -140,9 +162,9 @@ python \"$PY_ENTRY\" \
   --hadm-pkl \"$HADM_PKL\" \
   --lab-map-pkl \"$LAB_MAP_PKL\" \
   --ref-ranges-json \"$REF_RANGES_JSON\" \
-  --local-logging-dir \"\$REACT_LOG_DIR\" \
+  --local-logging-dir \"\$BASELINE_LOG_DIR\" \
   --reasoning-effort \"$REASONING_EFFORT\" \
-  --agent-type zeroshot \
+  --agent-type \"\$BASELINE_AGENT_TYPE\" \
   --hf-model-id \"$HF_MODEL_ID\" \
   patient_list_path=\"\$SAMPLE_IDS_FILE\" \
   ${PYTHON_EXTRA_ARGS}
@@ -153,21 +175,21 @@ python \"$PY_ENTRY\" \
   --hadm-pkl \"$HADM_PKL\" \
   --lab-map-pkl \"$LAB_MAP_PKL\" \
   --ref-ranges-json \"$REF_RANGES_JSON\" \
-  --local-logging-dir \"\$PLANNER_LOG_DIR\" \
+  --local-logging-dir \"\$COMPARE_LOG_DIR\" \
   --reasoning-effort \"$REASONING_EFFORT\" \
-  --agent-type plannerjudge \
+  --agent-type \"\$COMPARE_AGENT_TYPE\" \
   --hf-model-id \"$HF_MODEL_ID\" \
   planner=${PLANNER_CONFIG} \
   patient_list_path=\"\$SAMPLE_IDS_FILE\" \
   ${PYTHON_EXTRA_ARGS}
 
-export REACT_RESULTS=\$(ls -td \"\$REACT_LOG_DIR/${DISEASE}/\$MODEL_TAG\"/*/results.json | head -1)
-export PLANNER_RESULTS=\$(ls -td \"\$PLANNER_LOG_DIR/${DISEASE}/\$MODEL_TAG\"/*/results.json | head -1)
+export BASELINE_RESULTS=\$(ls -td \"\$BASELINE_LOG_DIR/${DISEASE}/\$MODEL_TAG\"/*/results.json | head -1)
+export COMPARE_RESULTS=\$(ls -td \"\$COMPARE_LOG_DIR/${DISEASE}/\$MODEL_TAG\"/*/results.json | head -1)
 
 python - <<'PY'
 import json, statistics, pathlib, os
-react_path = pathlib.Path(os.environ[\"REACT_RESULTS\"])
-planner_path = pathlib.Path(os.environ[\"PLANNER_RESULTS\"])
+react_path = pathlib.Path(os.environ[\"BASELINE_RESULTS\"])
+planner_path = pathlib.Path(os.environ[\"COMPARE_RESULTS\"])
 
 def summarize(path):
     data = json.loads(path.read_text())
@@ -198,8 +220,8 @@ def summarize_planner(path):
 
 react = summarize(react_path)
 planner = summarize_planner(planner_path)
-print(\"React summary:\", react)
-print(\"Planner+Judge summary:\", planner)
+print(f\"Baseline summary:\", react)
+print(f\"Compare summary:\", planner)
 PY
 "
 
