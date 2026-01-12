@@ -8,3 +8,4 @@ base_mimic: /cbica/projects/CXR/dropbox
 base_models: /cbica/projects/CXR/models
 lab_test_mapping_path: /cbica/projects/CXR/codes/MIMIC-Plain/lab_test_mapping_IV.pkl
 local_logging_dir: /cbica/projects/CXR/codes/MIMIC-Plain/outputs
+guidelines_path: /workspace/codes/STEER/guidelines/open_guidelines.jsonl

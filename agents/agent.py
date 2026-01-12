@@ -6,6 +6,7 @@ from typing import List, Tuple, Union, Dict, Any, Optional
 from hashlib import sha256
 import pandas as pd
 from functools import lru_cache
+from loguru import logger
 
 from langchain.agents import AgentExecutor
 from langchain.prompts import PromptTemplate
@@ -290,11 +291,15 @@ class CustomZeroShotAgent(ZeroShotAgent):
         self._differential_chain = None
         self._guideline_summary_chain = None
         self._guideline_cache = {}
+        logger.info(f"Configuring guideline retrieval: use_guideline_retrieval={self.use_guideline_retrieval}, guidelines_path={self.guidelines_path}")
         if not self.use_guideline_retrieval:
+            logger.info("Guideline retrieval disabled: use_guideline_retrieval is False")
             return
         if not self.guidelines_path:
+            logger.warning("Guideline retrieval disabled: guidelines_path is empty")
             return
         if not os.path.exists(self.guidelines_path):
+            logger.warning(f"Guideline retrieval disabled: path does not exist: {self.guidelines_path}")
             return
         max_lines = (
             None
@@ -314,9 +319,11 @@ class CustomZeroShotAgent(ZeroShotAgent):
             self.guidelines_chunk_overlap,
         )
         if not retriever:
+            logger.warning("Guideline retrieval disabled: failed to load retriever")
             return
         self._guideline_retriever = retriever
         self._guideline_enabled = True
+        logger.info(f"Guideline retrieval ENABLED with retriever from {self.guidelines_path}")
         diff_prompt = PromptTemplate(
             template=DIFFERENTIAL_TEMPLATE,
             input_variables=["input", "max_differentials"],
@@ -348,7 +355,9 @@ class CustomZeroShotAgent(ZeroShotAgent):
         self, patient_history: str, intermediate_steps: List[Tuple[AgentAction, str]]
     ) -> str:
         if not self._guideline_enabled:
+            logger.debug("_build_guideline_context: guideline not enabled, returning empty")
             return ""
+        logger.debug("_build_guideline_context: building context...")
         evidence = self._format_evidence(intermediate_steps)
         context_seed = patient_history.strip()
         if evidence:
@@ -510,7 +519,7 @@ def create_prompt(
 ) -> PromptTemplate:
     template = PromptTemplate(
         template=CHAT_TEMPLATE,
-        input_variables=["input", "agent_scratchpad"],
+        input_variables=["input", "agent_scratchpad", "guideline_context"],
         partial_variables={
             "tool_names": action_input_pretty_printer(tool_names, None),
             "add_tool_descr": add_tool_descr,
@@ -520,7 +529,6 @@ def create_prompt(
             "ai_tag_start": tags["ai_tag_start"],
             "system_tag_end": tags["system_tag_end"],
             "user_tag_end": tags["user_tag_end"],
-            "guideline_context": "",
         },
     )
     return template
