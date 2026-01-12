@@ -11,6 +11,7 @@ from langchain.agents import AgentExecutor
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain.agents.mrkl.base import ZeroShotAgent
+from pydantic.v1 import PrivateAttr
 from langchain.schema.messages import BaseMessage
 from langchain.schema import AgentAction
 from langchain.callbacks import FileCallbackHandler
@@ -96,11 +97,11 @@ class CustomZeroShotAgent(ZeroShotAgent):
     guidelines_query_tokens: int = 300
     guideline_temperature: float = 0.2
     guideline_top_p: float = 0.95
-    _guideline_enabled: bool = False
-    _guideline_retriever: Any = None
-    _differential_chain: Any = None
-    _guideline_summary_chain: Any = None
-    _guideline_cache: Dict[str, str] = None
+    _guideline_enabled: bool = PrivateAttr(default=False)
+    _guideline_retriever: Any = PrivateAttr(default=None)
+    _differential_chain: Any = PrivateAttr(default=None)
+    _guideline_summary_chain: Any = PrivateAttr(default=None)
+    _guideline_cache: Dict[str, str] = PrivateAttr(default=None)
 
     class Config:
         arbitrary_types_allowed = True

@@ -140,11 +140,10 @@ python \"$PY_ENTRY\" \
   --hadm-pkl \"$HADM_PKL\" \
   --lab-map-pkl \"$LAB_MAP_PKL\" \
   --ref-ranges-json \"$REF_RANGES_JSON\" \
-  --local-logging-dir \"\$PLANNER_LOG_DIR\" \
+  --local-logging-dir \"\$REACT_LOG_DIR\" \
   --reasoning-effort \"$REASONING_EFFORT\" \
-  --agent-type plannerjudge \
+  --agent-type zeroshot \
   --hf-model-id \"$HF_MODEL_ID\" \
-  planner=${PLANNER_CONFIG} \
   patient_list_path=\"\$SAMPLE_IDS_FILE\" \
   ${PYTHON_EXTRA_ARGS}
 
@@ -154,10 +153,11 @@ python \"$PY_ENTRY\" \
   --hadm-pkl \"$HADM_PKL\" \
   --lab-map-pkl \"$LAB_MAP_PKL\" \
   --ref-ranges-json \"$REF_RANGES_JSON\" \
-  --local-logging-dir \"\$REACT_LOG_DIR\" \
+  --local-logging-dir \"\$PLANNER_LOG_DIR\" \
   --reasoning-effort \"$REASONING_EFFORT\" \
-  --agent-type zeroshot \
+  --agent-type plannerjudge \
   --hf-model-id \"$HF_MODEL_ID\" \
+  planner=${PLANNER_CONFIG} \
   patient_list_path=\"\$SAMPLE_IDS_FILE\" \
   ${PYTHON_EXTRA_ARGS}
 
