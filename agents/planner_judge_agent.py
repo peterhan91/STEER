@@ -173,6 +173,7 @@ class PlannerJudgeAgent:
         self._guideline_retriever = None
         self._differential_chain = None
         self._guideline_summary_chain = None
+        self._last_guideline_context = ""
         self._guidelines_top_k = max(1, int(guidelines_top_k))
         self._guidelines_top_n = max(1, int(guidelines_top_n))
         self._guidelines_snippet_tokens = max(50, int(guidelines_snippet_tokens))
@@ -604,6 +605,7 @@ class PlannerJudgeAgent:
         evidence: Optional[str] = None,
     ) -> str:
         if not self._guideline_enabled:
+            self._last_guideline_context = ""
             return ""
         context_seed = patient_history.strip()
         if evidence:
@@ -611,9 +613,11 @@ class PlannerJudgeAgent:
         context_seed = self._truncate_text_for_retrieval(context_seed)
         differentials = self._generate_differentials(context_seed)
         if not differentials:
+            self._last_guideline_context = ""
             return ""
         snippets = self._retrieve_guideline_snippets(differentials, context_seed)
         if not snippets:
+            self._last_guideline_context = ""
             return ""
         summary = self._guideline_summary_chain.predict(
             differentials="\n".join(f"- {item}" for item in differentials),
@@ -624,6 +628,7 @@ class PlannerJudgeAgent:
         )
         summary = (summary or "").strip()
         if not summary:
+            self._last_guideline_context = ""
             return ""
         summary = truncate_text(
             self._retrieval_llm.tokenizer,
@@ -631,11 +636,13 @@ class PlannerJudgeAgent:
             self._guidelines_context_tokens,
         )
         ddx_list = "\n".join(f"- {item}" for item in differentials)
-        return (
+        context = (
             "Guideline Context:\n"
             f"Top differentials:\n{ddx_list}\n"
             f"Guideline summary:\n{summary}"
         ).strip()
+        self._last_guideline_context = context
+        return context
 
     def _truncate_text_for_retrieval(self, text: str) -> str:
         if not text:

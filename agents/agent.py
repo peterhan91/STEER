@@ -103,6 +103,7 @@ class CustomZeroShotAgent(ZeroShotAgent):
     _differential_chain: Any = PrivateAttr(default=None)
     _guideline_summary_chain: Any = PrivateAttr(default=None)
     _guideline_cache: Dict[str, str] = PrivateAttr(default=None)
+    _last_guideline_context: str = PrivateAttr(default="")
 
     class Config:
         arbitrary_types_allowed = True
@@ -356,6 +357,7 @@ class CustomZeroShotAgent(ZeroShotAgent):
     ) -> str:
         if not self._guideline_enabled:
             logger.debug("_build_guideline_context: guideline not enabled, returning empty")
+            self._last_guideline_context = ""
             return ""
         logger.debug("_build_guideline_context: building context...")
         evidence = self._format_evidence(intermediate_steps)
@@ -364,16 +366,20 @@ class CustomZeroShotAgent(ZeroShotAgent):
             context_seed = f"{context_seed}\nEvidence:\n{evidence.strip()}"
         context_seed = self._truncate_text_for_retrieval(context_seed)
         if not context_seed:
+            self._last_guideline_context = ""
             return ""
         cache_key = sha256(context_seed.encode()).hexdigest()
         cached = self._guideline_cache.get(cache_key)
         if cached is not None:
+            self._last_guideline_context = cached
             return cached
         differentials = self._generate_differentials(context_seed)
         if not differentials:
+            self._last_guideline_context = ""
             return ""
         snippets = self._retrieve_guideline_snippets(differentials, context_seed)
         if not snippets:
+            self._last_guideline_context = ""
             return ""
         summary = self._guideline_summary_chain.predict(
             differentials="\n".join(f"- {item}" for item in differentials),
@@ -384,6 +390,7 @@ class CustomZeroShotAgent(ZeroShotAgent):
         )
         summary = (summary or "").strip()
         if not summary:
+            self._last_guideline_context = ""
             return ""
         summary = truncate_text(
             self.llm_chain.llm.tokenizer,
@@ -397,6 +404,7 @@ class CustomZeroShotAgent(ZeroShotAgent):
             f"Guideline summary:\n{summary}"
         ).strip()
         self._guideline_cache[cache_key] = context
+        self._last_guideline_context = context
         return context
 
     def _format_evidence(

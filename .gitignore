@@ -1,4 +1,5 @@
 .vscode/
+Qwen3-30B-A3B-Instruct-2507_RAG/
 *.pyc
 debug.txt
 guidelines/open_guidelines.jsonl

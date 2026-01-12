@@ -852,6 +852,10 @@ def run(args: DictConfig):
         result_dict_safe = dict(result)
         result_dict_safe["output_raw"] = raw_output_text
         result_dict_safe["output"] = structured
+        agent = getattr(agent_executor, "agent", None)
+        result_dict_safe["guideline_context"] = (
+            getattr(agent, "_last_guideline_context", "") or ""
+        )
 
         if use_planner_judge or use_rewoo_planner_judge:
             result_dict_safe["plan_initial"] = (
